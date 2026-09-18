@@ -7,7 +7,7 @@ CONSOLE_PORT=${CONSOLE_PORT:=9000}
 CONSOLE_IMAGE_PLATFORM=${CONSOLE_IMAGE_PLATFORM:="linux/amd64"}
 
 # Plugin metadata is declared in package.json
-PLUGIN_NAME=${npm_package_consolePlugin_name}
+PLUGIN_NAME=$(node -p "require('./package.json').consolePlugin.name")
 
 echo "Starting local OpenShift console..."
 
@@ -38,8 +38,26 @@ echo "Console Image: $CONSOLE_IMAGE"
 echo "Console URL: http://localhost:${CONSOLE_PORT}"
 echo "Console Platform: $CONSOLE_IMAGE_PLATFORM"
 
-# Prefer podman if installed. Otherwise, fall back to docker.
-if [ -x "$(command -v podman)" ]; then
+# Set CONTAINER_ENGINE to override auto-detection (container, podman, or docker).
+if [ -z "${CONTAINER_ENGINE:-}" ]; then
+    if [ -x "$(command -v container)" ]; then
+        CONTAINER_ENGINE=container
+    elif [ -x "$(command -v podman)" ]; then
+        CONTAINER_ENGINE=podman
+    else
+        CONTAINER_ENGINE=docker
+    fi
+fi
+
+echo "Container Engine: $CONTAINER_ENGINE"
+
+if [ "$CONTAINER_ENGINE" = "container" ]; then
+    # Apple's container runtime doesn't resolve host.containers.internal; use the host's bridge IP.
+    HOST_IP=$(ifconfig bridge100 2>/dev/null | awk '/inet / {print $2}')
+    HOST_IP=${HOST_IP:-192.168.65.1}
+    BRIDGE_PLUGINS="${PLUGIN_NAME}=http://${HOST_IP}:9001"
+    container run --rm --platform $CONSOLE_IMAGE_PLATFORM -p "$CONSOLE_PORT":9000 --env-file <(set | grep BRIDGE) $CONSOLE_IMAGE
+elif [ "$CONTAINER_ENGINE" = "podman" ]; then
     if [ "$(uname -s)" = "Linux" ]; then
         # Use host networking on Linux since host.containers.internal is unreachable in some environments.
         BRIDGE_PLUGINS="${PLUGIN_NAME}=http://localhost:9001"

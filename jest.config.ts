@@ -9,6 +9,7 @@ const config: Config = {
     '\\.css$': '<rootDir>/__mocks__/styleMock.ts',
   },
   transform: {
+    '\\.ya?ml$': '<rootDir>/__mocks__/yamlTransform.cjs',
     '^.+\\.[jt]sx?$': [
       '@swc/jest',
       {
@@ -20,6 +21,7 @@ const config: Config = {
       },
     ],
   },
+  setupFiles: ['./setup-globals.ts'],
   setupFilesAfterEnv: ['./setup-tests.ts'],
   testPathIgnorePatterns: ['integration-tests'],
 };

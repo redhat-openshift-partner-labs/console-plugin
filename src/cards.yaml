@@ -1,0 +1,386 @@
+- id: create-vm
+  title: Creating Virtual Machines
+  body: Create and manage virtual machines using the OpenShift web console and pre-built templates with OpenShift Virtualization.
+  cookbook:
+    - heading: Overview
+      level: 2
+      content:
+        - type: text
+          value: >
+            This guide demonstrates how to create virtual machines using the OpenShift web console
+            and pre-built templates. The web console provides an intuitive graphical interface for
+            VM management, making it an ideal starting point for new users.
+
+    - heading: How Template-Based VM Creation Works
+      level: 2
+      content:
+        - type: text
+          value: >
+            When you create a VM from a template, OpenShift Virtualization orchestrates several
+            resources automatically.
+        - type: steps
+          items:
+            - "Template defines the VirtualMachine spec with a DataSource reference"
+            - "DataSource points to a pre-imported golden-image PVC"
+            - "DataVolume orchestrates the clone operation"
+            - "Clone produces a PVC in your project namespace"
+            - "virt-launcher pod starts and runs the VM via QEMU/KVM"
+            - "VirtualMachineInstance represents the running state"
+        - type: note
+          value: Clone operation duration depends on the disk size and the storage backend.
+          variant: info
+
+    - heading: Prerequisites
+      level: 2
+      content:
+        - type: text
+          value: "Before creating VMs, ensure the following requirements are met:"
+        - type: steps
+          items:
+            - "OpenShift 4.18+ with the OpenShift Virtualization operator installed"
+            - "Web console access with VM creation permissions"
+            - "Default StorageClass configured"
+            - "Available boot source images (DataSources)"
+        - type: text
+          value: "Verify that boot source images are available:"
+        - type: command
+          value: oc get datasources -n openshift-virtualization-os-images
+          action: list-datasources
+
+    - heading: "Step 1: Access the Virtualization Section"
+      level: 2
+      content:
+        - type: steps
+          items:
+            - "Navigate to the OpenShift web console"
+            - "In the left navigation menu, click Virtualization"
+            - "Click the VirtualMachines tab to see existing VMs"
+
+    - heading: "Step 2: Browse Available Templates"
+      level: 2
+      content:
+        - type: text
+          value: >
+            Templates are organized by operating system category including Red Hat Enterprise Linux,
+            Fedora, CentOS Stream, and Microsoft Windows. Templates showing "Source available"
+            have pre-configured boot sources ready to use.
+        - type: text
+          value: "Each template includes:"
+        - type: steps
+          items:
+            - "Pre-configured CPU and memory settings"
+            - "Appropriate disk size"
+            - "Boot source reference (DataSource)"
+            - "Cloud-init or sysprep configuration"
+
+    - heading: What a VM Template Contains
+      level: 2
+      content:
+        - type: text
+          value: >
+            Templates carry parameters (fields with placeholders like ${NAME} replaced at creation),
+            DataSource references in the openshift-virtualization-os-images namespace, and web console
+            annotations for catalog display.
+        - type: text
+          value: "Inspect the structure of a template:"
+        - type: command
+          value: oc get template fedora-server-small -n openshift -o yaml
+          action: get-template
+
+    - heading: "Step 3: Create a VM from a Template"
+      level: 2
+      content:
+        - type: text
+          value: >
+            Select a template tile from the catalog, then configure your VM details. You can
+            customize the name, project, boot source, CPU cores, and memory allocation on the
+            Overview tab. Optionally adjust storage on the Disks tab.
+
+    - heading: Select and Configure
+      level: 3
+      content:
+        - type: steps
+          items:
+            - "Click the template tile that matches your desired OS"
+            - "Click Customize VirtualMachine to adjust settings"
+            - "Set the VM name and verify the project/namespace"
+            - "Adjust CPU cores and memory allocation as needed"
+            - "Review the Disks tab — optionally adjust size or add disks"
+            - "Click Create VirtualMachine to start provisioning"
+
+    - heading: Quick Create with Defaults
+      level: 3
+      content:
+        - type: text
+          value: >
+            For a faster workflow, you can use Quick Create which accepts all template defaults
+            and gets a running VM in seconds. Best for testing, demos, and throwaway development VMs.
+        - type: text
+          value: "Or create a VM directly using the Console SDK:"
+        - type: command
+          value: "# Creates a Fedora VM with 2Gi memory and 30Gi disk in your active namespace"
+          action: create-vm
+
+    - heading: "Step 4: Monitor VM Creation"
+      level: 2
+      content:
+        - type: text
+          value: "The VM goes through three provisioning phases:"
+        - type: steps
+          items:
+            - "Provisioning — disk cloning in progress"
+            - "Starting — VM is booting"
+            - "Running — VM is fully operational"
+        - type: text
+          value: "Track provisioning progress from the CLI:"
+        - type: command
+          value: "oc get events -n <your-namespace> --field-selector involvedObject.name=<vm-name> -w"
+
+    - heading: "Step 5: Access the VM Console"
+      level: 2
+      content:
+        - type: steps
+          items:
+            - "Navigate to the VM details page"
+            - "Click the Console tab to open the VNC console"
+        - type: text
+          value: >
+            The console toolbar provides options to send special key combinations, disconnect,
+            and view guest credentials. If no cloud-init user data was provided, you may need
+            to set up a user.
+
+    - heading: "Step 6: Basic VM Operations"
+      level: 2
+      content:
+        - type: text
+          value: "Common VM lifecycle operations are available from the Actions dropdown on the VM details page."
+
+    - heading: Stop a VM
+      level: 3
+      content:
+        - type: text
+          value: "Gracefully shut down a running VM:"
+        - type: command
+          value: virtctl stop <vm-name>
+
+    - heading: Restart a VM
+      level: 3
+      content:
+        - type: text
+          value: "Perform a graceful restart:"
+        - type: command
+          value: virtctl restart <vm-name>
+
+    - heading: Pause and Unpause
+      level: 3
+      content:
+        - type: text
+          value: "Pause a VM to temporarily suspend execution."
+        - type: note
+          value: Paused VMs still consume memory resources on the node.
+          variant: warning
+
+    - heading: Delete a VM
+      level: 3
+      content:
+        - type: text
+          value: "Delete a VM from the Actions menu. You can choose to keep or delete associated disks."
+        - type: note
+          value: Deleting a VM with its disks is permanent. Ensure you have backups if needed.
+          variant: warning
+
+    - heading: "Step 7: View VM Details and Metrics"
+      level: 2
+      content:
+        - type: text
+          value: >
+            The VM details page provides several tabs including Overview (status, IPs, CPU/memory
+            utilization, boot order), Metrics (real-time CPU, memory, network, and storage I/O),
+            and YAML (view and edit the VM manifest directly).
+        - type: note
+          value: Full metrics require the QEMU guest agent to be installed inside the VM.
+          variant: info
+
+    - heading: Choosing the Right VM Creation Method
+      level: 2
+      content:
+        - type: text
+          value: "Choose the method that best fits your use case:"
+        - type: steps
+          items:
+            - "Quick Create from Template — Best for testing, demos, and throwaway development VMs"
+            - "Customized Template — Most common for day-to-day work with specific CPU, memory, or disk needs"
+            - "Custom YAML Manifests — Best for automation, GitOps pipelines, and full control over every field"
+            - "Custom Templates — Best for organizations with standardized VM configurations"
+
+- id: vm-templates
+  title: Custom VM Templates
+  body: Create and customize virtual machine templates for fast, repeatable deployments with predefined instance types, networking, and storage.
+  cookbook:
+    - heading: Overview
+      level: 2
+      content:
+        - type: text
+          value: >
+            Similar to golden images, where a disk image is prepared for use as a data source,
+            templates take this further by templatizing a VirtualMachine manifest. Templates specify
+            the virtual hardware including instance type, machine preference, networks, disks,
+            and predefined labels and annotations.
+        - type: text
+          value: >
+            This allows for fast and repeatable deployments of an entire machine specification,
+            both from the OpenShift Virtualization console and from the command line.
+
+    - heading: Prerequisites
+      level: 2
+      content:
+        - type: text
+          value: "Before starting, ensure the following:"
+        - type: steps
+          items:
+            - "A bash or compatible shell environment"
+            - "The OpenShift client tool (oc) installed"
+            - "An OpenShift cluster with OpenShift Virtualization installed"
+            - "A text editor or IDE"
+
+    - heading: "Step 1: Viewing and Selecting Templates"
+      level: 2
+      content:
+        - type: text
+          value: >
+            Start by fetching the list of templates available in the openshift project.
+            You'll see templates organized by OS and t-shirt size (small, medium, large).
+        - type: command
+          value: oc get templates -n openshift
+          action: list-templates
+        - type: text
+          value: >
+            Inspect a specific template to understand its structure. The template contains
+            parameters, DataSource references, and web console annotations.
+        - type: command
+          value: oc get template rhel9-server-medium -n openshift -o yaml
+          action: get-rhel9-template
+
+    - heading: Understanding Template Parameters
+      level: 3
+      content:
+        - type: text
+          value: "Each template defines parameters that are substituted when a VM is created:"
+        - type: steps
+          items:
+            - "NAME — Unique name generation for VMs using character classes and counts (e.g. rhel9-[a-z0-9]{16})"
+            - "DATA_SOURCE_NAME — Name of the DataSource (golden image) to clone the VM from"
+            - "DATA_SOURCE_NAMESPACE — Namespace where the DataSource exists (default: openshift-virtualization-os-images)"
+            - "CLOUD_USER_PASSWORD — Auto-generated password for the default cloud-init user"
+        - type: note
+          value: Parameters use bash-style variable syntax (${NAME}) and are replaced at creation time.
+          variant: info
+
+    - heading: "Step 2: Deploying a VM from a Template"
+      level: 2
+      content:
+        - type: text
+          value: >
+            Deploy a VirtualMachine from a template using the CLI. This is done by processing
+            the template and piping the output to oc create or oc apply.
+        - type: text
+          value: "First, create a project to house the VM:"
+        - type: command
+          value: oc new-project template-example
+          action: create-template-project
+        - type: text
+          value: "Process the template and create the VM:"
+        - type: command
+          value: oc process rhel9-server-medium -n openshift | oc create -n template-example -f -
+          action: deploy-from-template
+        - type: text
+          value: "Check the resources created by the template:"
+        - type: command
+          value: oc get all -n template-example
+          action: get-template-resources
+        - type: note
+          value: The DataVolume will show as PendingPopulation and the VirtualMachine will be in Stopped state until started.
+          variant: info
+        - type: text
+          value: "Start the VM:"
+        - type: command
+          value: virtctl start <vm-name>
+
+    - heading: "Step 3: Customizing a Template"
+      level: 2
+      content:
+        - type: text
+          value: >
+            You can create custom templates by modifying an existing template. Common
+            customizations include changing the run strategy, adjusting cloud-init settings,
+            and adding new parameters.
+        - type: text
+          value: "Key changes for a custom template:"
+        - type: steps
+          items:
+            - "Change metadata.name to a custom name (e.g. rhel9-custom)"
+            - "Set runStrategy from Halted to Always so VMs start immediately on creation"
+            - "Customize the NAME parameter prefix and auto-generated character count"
+            - "Add a CLOUD_INIT_USERNAME parameter to templatize the user account name"
+            - "Rename CLOUD_USER_PASSWORD to CLOUD_INIT_PASSWORD for clarity"
+        - type: text
+          value: "Create the custom template in the active namespace:"
+        - type: command
+          value: "# Creates a customized RHEL 9 template with runStrategy: Always and configurable cloud-init user"
+          action: create-custom-template
+
+    - heading: "Step 4: Final Testing and Cleanup"
+      level: 2
+      content:
+        - type: text
+          value: "Deploy a VM from the custom template and verify it starts automatically:"
+        - type: command
+          value: oc get vm -n template-example
+          action: list-template-vms
+        - type: text
+          value: "Connect to the VM console using virtctl:"
+        - type: command
+          value: virtctl console <vm-name>
+        - type: note
+          value: "Hit ENTER to see the login prompt. Use CTRL+] to exit the console view."
+          variant: info
+        - type: text
+          value: >
+            To make a template available cluster-wide from the OpenShift Virtualization console,
+            create the template in the openshift project as a cluster-admin.
+        - type: text
+          value: "Clean up all resources by deleting the namespace:"
+        - type: command
+          value: oc delete namespace template-example
+        - type: note
+          value: This will permanently delete all VMs and associated disks in the template-example namespace.
+          variant: warning
+
+    - heading: Summary
+      level: 2
+      content:
+        - type: text
+          value: "In this tutorial you learned:"
+        - type: steps
+          items:
+            - "What a VirtualMachine template is and its purpose"
+            - "How to view the default available templates in OpenShift Virtualization"
+            - "How to select and inspect an existing template"
+            - "How to deploy a VirtualMachine from a default template"
+            - "How to create a custom template for tailored VM deployments"
+
+- id: pipelines-demo
+  title: Build & Deploy Pipeline
+  body: Clone a Node.js app, build it with S2I, and deploy to your namespace using OpenShift Pipelines.
+  pipelineRef: s2i-nodejs-deployment
+  pipelineSteps:
+    - create-deployment
+    - fetch-repository
+    - build
+    - deploy
+  pipelineParams:
+    APP_NAME: nodejs-demo
+    GIT_REPO: "https://github.com/sclorg/nodejs-ex.git"
+    GIT_REVISION: master
+    PATH_CONTEXT: "."
+    VERSION: latest

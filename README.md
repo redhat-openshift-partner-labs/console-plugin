@@ -1,7 +1,6 @@
-# OpenShift console plugin template
+# OpenShift Partner Labs Console Plugin
 
-This project is a minimal template for writing a new OpenShift Console dynamic
-plugin.
+This project is an OpenShift Console dynamic plugin for OpenShift Partner Labs.
 
 [Openshift console plugins](https://github.com/openshift/console/tree/main/frontend/packages/console-dynamic-plugin-sdk)
 allow you to extend the [OpenShift web console](https://github.com/openshift/console)
@@ -23,7 +22,7 @@ to build and run the example. To run OpenShift console in a container, either
 
 > [!IMPORTANT]
 > To use this template, **DO NOT FORK THIS REPOSITORY**! Click **Use this template**, then select
-> [**Create a new repository**](https://github.com/new?template_name=console-plugin-template&template_owner=openshift)
+> [**Create a new repository**](https://github.com/new?template_name=partner-labs-console-plugin&template_owner=openshift)
 > to create a new repository.
 >
 > ![A screenshot showing where the "Use this template" button is located](https://i.imgur.com/AhaySbU.png)
@@ -41,7 +40,7 @@ plugin name in the `consolePlugin` declaration of [package.json](package.json).
 
 ```json
 "consolePlugin": {
-  "name": "console-plugin-template",
+  "name": "partner-labs-console-plugin",
   "version": "0.0.1",
   "displayName": "My Plugin",
   "description": "Enjoy this shiny, new console plugin!",
@@ -106,7 +105,7 @@ cached containers will help you start developing in seconds.
 1. Create a `dev.env` file inside the `.devcontainer` folder with the correct values for your cluster:
 
 ```bash
-OC_PLUGIN_NAME=console-plugin-template
+OC_PLUGIN_NAME=partner-labs-console-plugin
 OC_URL=https://api.example.com:6443
 OC_USER=kubeadmin
 OC_PASS=<password>
@@ -155,7 +154,7 @@ Additional parameters can be specified if desired. Consult the chart [values](ch
 
 ### Installing the Helm Chart
 
-Install the chart using the name of the plugin as the Helm release name into a new namespace or an existing namespace as specified by the `plugin_console-plugin-template` parameter and providing the location of the image within the `plugin.image` parameter by using the following command:
+Install the chart using the name of the plugin as the Helm release name into a new namespace or an existing namespace as specified by the `plugin_partner-labs-console-plugin` parameter and providing the location of the image within the `plugin.image` parameter by using the following command:
 
 ```shell
 helm upgrade -i  my-plugin charts/openshift-console-plugin -n my-namespace --create-namespace --set plugin.image=my-plugin-image-location
@@ -170,19 +169,19 @@ NOTE: When defining i18n namespace, adhere `plugin__<name-of-the-plugin>` format
 The plugin template demonstrates how you can translate messages in with [react-i18next](https://react.i18next.com/). The i18n namespace must match
 the name of the `ConsolePlugin` resource with the `plugin__` prefix to avoid
 naming conflicts. For example, the plugin template uses the
-`plugin__console-plugin-template` namespace. You can use the `useTranslation` hook
+`plugin__partner-labs-console-plugin` namespace. You can use the `useTranslation` hook
 with this namespace as follows:
 
 ```tsx
 const Header: React.FC = () => {
-  const { t } = useTranslation('plugin__console-plugin-template');
+  const { t } = useTranslation('plugin__partner-labs-console-plugin');
   return <h1>{t('Hello, World!')}</h1>;
 };
 ```
 
 For labels in `console-extensions.json`, you can use the format
-`%plugin__console-plugin-template~My Label%`. Console will replace the value with
-the message for the current language from the `plugin__console-plugin-template`
+`%plugin__partner-labs-console-plugin~My Label%`. Console will replace the value with
+the message for the current language from the `plugin__partner-labs-console-plugin`
 namespace. For example:
 
 ```json
@@ -191,7 +190,7 @@ namespace. For example:
     "properties": {
       "id": "admin-demo-section",
       "perspective": "admin",
-      "name": "%plugin__console-plugin-template~Plugin Template%"
+      "name": "%plugin__partner-labs-console-plugin~Plugin Template%"
     }
   }
 ```

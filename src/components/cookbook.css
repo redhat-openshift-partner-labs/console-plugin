@@ -1,0 +1,54 @@
+.partner-labs-console-plugin__cookbook-title {
+  margin-bottom: var(--pf-t--global--spacer--sm);
+}
+
+.partner-labs-console-plugin__namespace-info {
+  margin-bottom: var(--pf-t--global--spacer--lg);
+  color: var(--pf-t--global--color--subtle);
+}
+
+.partner-labs-console-plugin__cookbook-section {
+  margin-bottom: var(--pf-t--global--spacer--xl);
+}
+
+.partner-labs-console-plugin__command-block {
+  margin: var(--pf-t--global--spacer--md) 0;
+}
+
+.partner-labs-console-plugin__command-result {
+  margin-top: var(--pf-t--global--spacer--sm);
+}
+
+.partner-labs-console-plugin__cookbook-note {
+  margin: var(--pf-t--global--spacer--md) 0;
+}
+
+.partner-labs-console-plugin__command-detail {
+  margin-top: var(--pf-t--global--spacer--sm);
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.partner-labs-console-plugin__status-success {
+  color: var(--pf-t--global--color--status--success--default);
+}
+
+.partner-labs-console-plugin__status-error {
+  color: var(--pf-t--global--color--status--danger--default);
+}
+
+.partner-labs-console-plugin__spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid var(--pf-t--global--color--brand--default);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: partner-labs-spin 0.6s linear infinite;
+}
+
+@keyframes partner-labs-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

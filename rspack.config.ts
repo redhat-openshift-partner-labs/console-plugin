@@ -44,6 +44,11 @@ export default defineConfig({
         type: 'javascript/auto',
       },
       {
+        test: /\.ya?ml$/,
+        use: 'yaml-loader',
+        type: 'javascript/auto',
+      },
+      {
         test: /\.(css)$/,
         use: 'builtin:lightningcss-loader',
         type: 'css',

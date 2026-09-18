@@ -1,0 +1,53 @@
+.partner-labs-console-plugin__demo-card {
+  cursor: pointer;
+  transition: box-shadow 0.2s ease;
+}
+
+.partner-labs-console-plugin__demo-card:hover {
+  box-shadow: var(--pf-t--global--box-shadow--md);
+}
+
+.partner-labs-console-plugin__card-spinner {
+  margin-left: var(--pf-t--global--spacer--sm);
+  vertical-align: middle;
+}
+
+.partner-labs-console-plugin__card-status-success {
+  margin-left: var(--pf-t--global--spacer--sm);
+  color: var(--pf-t--global--color--status--success--default);
+  vertical-align: middle;
+}
+
+.partner-labs-console-plugin__card-status-error {
+  margin-left: var(--pf-t--global--spacer--sm);
+  color: var(--pf-t--global--color--status--danger--default);
+  vertical-align: middle;
+}
+
+.partner-labs-console-plugin__drawer-status {
+  display: flex;
+  align-items: center;
+  gap: var(--pf-t--global--spacer--sm);
+  margin-bottom: var(--pf-t--global--spacer--lg);
+  font-size: var(--pf-t--global--font--size--body--lg);
+}
+
+.partner-labs-console-plugin__drawer-alert {
+  margin-bottom: var(--pf-t--global--spacer--md);
+}
+
+.partner-labs-console-plugin__progress-stepper {
+  margin-bottom: var(--pf-t--global--spacer--lg);
+}
+
+.partner-labs-console-plugin__run-again {
+  margin-top: var(--pf-t--global--spacer--md);
+}
+
+.partner-labs-console-plugin__status-success {
+  color: var(--pf-t--global--color--status--success--default);
+}
+
+.partner-labs-console-plugin__status-error {
+  color: var(--pf-t--global--color--status--danger--default);
+}

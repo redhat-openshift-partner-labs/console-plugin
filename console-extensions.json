@@ -3,18 +3,25 @@
     "type": "console.page/route",
     "properties": {
       "exact": true,
-      "path": "/example",
-      "component": { "$codeRef": "ExamplePage" }
+      "path": "/partner-labs-demos",
+      "component": { "$codeRef": "DemosPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "path": "/partner-labs-demos/:demoId",
+      "component": { "$codeRef": "CookbookPage" }
     }
   },
   {
     "type": "console.navigation/href",
     "properties": {
-      "id": "example",
-      "name": "%plugin__console-plugin-template~Plugin example%",
-      "href": "/example",
+      "id": "partner-labs-demos",
+      "name": "%plugin__partner-labs-console-plugin~Partner Labs Demos%",
+      "href": "/partner-labs-demos",
       "perspective": "admin",
-      "section": "home"
+      "insertBefore": "home"
     }
   }
 ]
