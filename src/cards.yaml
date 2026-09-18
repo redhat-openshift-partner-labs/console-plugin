@@ -384,3 +384,10 @@
     GIT_REVISION: master
     PATH_CONTEXT: "."
     VERSION: latest
+
+- id: instancetype-preference
+  title: VM Instancetypes & Preferences
+  body: >
+    Follow a guided Quick Start tutorial to learn how instancetypes and
+    preferences standardize virtual machine definitions in OpenShift Virtualization.
+  quickStartId: partner-labs-instancetype-preference

@@ -5,6 +5,7 @@ import {
   ListPageHeader,
   useActiveNamespace,
   useK8sWatchResource,
+  useQuickStartContext,
 } from '@openshift-console/dynamic-plugin-sdk';
 import type { K8sResourceCommon } from '@openshift-console/dynamic-plugin-sdk';
 import { useTranslation } from 'react-i18next';
@@ -24,6 +25,7 @@ import {
   DrawerPanelContent,
   Gallery,
   GalleryItem,
+  Label,
   PageSection,
   ProgressStep,
   ProgressStepper,
@@ -44,9 +46,12 @@ interface DemoCard {
   pipelineRef?: string;
   pipelineSteps?: string[];
   pipelineParams?: Record<string, string>;
+  quickStartId?: string;
 }
 
-const cards = (Array.isArray(cardsData) ? cardsData : (cardsData as { default: DemoCard[] }).default) as DemoCard[];
+const cards = (
+  Array.isArray(cardsData) ? cardsData : (cardsData as { default: DemoCard[] }).default
+) as DemoCard[];
 
 const STORAGE_KEY = 'partner-labs-pipeline-run';
 
@@ -57,18 +62,28 @@ interface StoredRun {
 }
 
 function saveRun(run: StoredRun) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(run)); } catch { /* noop */ }
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(run));
+  } catch {
+    /* noop */
+  }
 }
 
 function loadRun(): StoredRun | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 function clearRun() {
-  try { localStorage.removeItem(STORAGE_KEY); } catch { /* noop */ }
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    /* noop */
+  }
 }
 
 const DeploymentModel = {
@@ -100,15 +115,17 @@ function kebabToTitle(s: string): string {
 }
 
 interface PipelineRunStatusShape {
-  conditions?: Array<{ type: string; status: string; reason: string; message: string }>;
-  childReferences?: Array<{
+  conditions?: { type: string; status: string; reason: string; message: string }[];
+  childReferences?: {
     name: string;
     pipelineTaskName: string;
     kind: string;
-  }>;
+  }[];
 }
 
-function getOverallStatus(pr: K8sResourceCommon | undefined): 'idle' | 'running' | 'succeeded' | 'failed' {
+function getOverallStatus(
+  pr: K8sResourceCommon | undefined,
+): 'idle' | 'running' | 'succeeded' | 'failed' {
   if (!pr) return 'idle';
   const status = (pr as unknown as { status?: PipelineRunStatusShape }).status;
   if (!status?.conditions?.length) return 'running';
@@ -152,7 +169,10 @@ function getStepVariant(
     if (completedTasks.has(step)) return 'success';
     const pipelineSteps = steps.filter((s) => s !== 'create-deployment');
     const stepIdx = pipelineSteps.indexOf(step);
-    const lastCompleted = pipelineSteps.reduce((max, s, i) => (completedTasks.has(s) ? i : max), -1);
+    const lastCompleted = pipelineSteps.reduce(
+      (max, s, i) => (completedTasks.has(s) ? i : max),
+      -1,
+    );
     if (stepIdx === lastCompleted + 1) return 'danger';
     return 'pending';
   }
@@ -160,7 +180,10 @@ function getStepVariant(
     if (completedTasks.has(step)) return 'success';
     const pipelineSteps = steps.filter((s) => s !== 'create-deployment');
     const stepIdx = pipelineSteps.indexOf(step);
-    const lastCompleted = pipelineSteps.reduce((max, s, i) => (completedTasks.has(s) ? i : max), -1);
+    const lastCompleted = pipelineSteps.reduce(
+      (max, s, i) => (completedTasks.has(s) ? i : max),
+      -1,
+    );
     if (stepIdx === lastCompleted + 1) return 'info';
     return 'pending';
   }
@@ -171,6 +194,7 @@ const DemosPage: FC = () => {
   const { t } = useTranslation('plugin__partner-labs-console-plugin');
   const navigate = useNavigate();
   const [activeNamespace] = useActiveNamespace();
+  const { setActiveQuickStart } = useQuickStartContext();
   const [pipelineRunName, setPipelineRunName] = useState<string | null>(null);
   const [pipelineCardId, setPipelineCardId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -191,7 +215,10 @@ const DemosPage: FC = () => {
 
     // Fallback: query for the latest running PipelineRun with our label
     const pipelineCards = cards.filter((c) => c.pipelineRef);
-    if (!pipelineCards.length) { setRestored(true); return; }
+    if (!pipelineCards.length) {
+      setRestored(true);
+      return;
+    }
 
     (async () => {
       for (const card of pipelineCards) {
@@ -263,7 +290,9 @@ const DemosPage: FC = () => {
   const completedTasks = getCompletedTasks(pr);
 
   const activeCard = cards.find((c) => c.id === pipelineCardId);
-  const isRunning = (setupStatus !== 'idle' && setupStatus !== 'done') || (!!pipelineRunName && overall === 'running');
+  const isRunning =
+    (setupStatus !== 'idle' && setupStatus !== 'done') ||
+    (!!pipelineRunName && overall === 'running');
 
   const handleRunPipeline = useCallback(
     async (card: DemoCard) => {
@@ -382,14 +411,19 @@ const DemosPage: FC = () => {
         setPipelineCardId(card.id);
         setDrawerOpen(true);
         setCreateError(null);
+      } else if (card.quickStartId) {
+        setActiveQuickStart?.(card.quickStartId);
       } else {
         navigate(`/partner-labs-demos/${card.id}`);
       }
     },
-    [navigate],
+    [navigate, setActiveQuickStart],
   );
 
-  const canClose = overall === 'succeeded' || overall === 'failed' || (overall === 'idle' && setupStatus === 'idle');
+  const canClose =
+    overall === 'succeeded' ||
+    overall === 'failed' ||
+    (overall === 'idle' && setupStatus === 'idle');
 
   const handleCloseDrawer = useCallback(() => {
     if (!canClose) return;
@@ -425,12 +459,22 @@ const DemosPage: FC = () => {
       </DrawerHead>
       <DrawerPanelBody>
         {createError && (
-          <Alert variant="danger" isInline title={t('Failed to create PipelineRun')} className="partner-labs-console-plugin__drawer-alert">
+          <Alert
+            variant="danger"
+            isInline
+            title={t('Failed to create PipelineRun')}
+            className="partner-labs-console-plugin__drawer-alert"
+          >
             {createError}
           </Alert>
         )}
         {watchError && (
-          <Alert variant="danger" isInline title={t('Watch error')} className="partner-labs-console-plugin__drawer-alert">
+          <Alert
+            variant="danger"
+            isInline
+            title={t('Watch error')}
+            className="partner-labs-console-plugin__drawer-alert"
+          >
             {String(watchError)}
           </Alert>
         )}
@@ -448,7 +492,13 @@ const DemosPage: FC = () => {
         {(setupStatus !== 'idle' || pipelineRunName) && activeCard?.pipelineSteps && (
           <ProgressStepper isVertical className="partner-labs-console-plugin__progress-stepper">
             {activeCard.pipelineSteps.map((step) => {
-              const variant = getStepVariant(step, setupStatus, overall, completedTasks, activeCard.pipelineSteps!);
+              const variant = getStepVariant(
+                step,
+                setupStatus,
+                overall,
+                completedTasks,
+                activeCard.pipelineSteps!,
+              );
               return (
                 <ProgressStep
                   key={step}
@@ -465,7 +515,11 @@ const DemosPage: FC = () => {
         )}
 
         {pipelineRunName && (overall === 'succeeded' || overall === 'failed') && (
-          <Button variant="secondary" onClick={handleRunAgain} className="partner-labs-console-plugin__run-again">
+          <Button
+            variant="secondary"
+            onClick={handleRunAgain}
+            className="partner-labs-console-plugin__run-again"
+          >
             {t('Run Again')}
           </Button>
         )}
@@ -485,7 +539,8 @@ const DemosPage: FC = () => {
             <DrawerContentBody>
               <Gallery hasGutter minWidths={{ default: '300px' }}>
                 {cards.map((card) => {
-                  const isActiveRun = card.id === pipelineCardId && (setupStatus !== 'idle' || !!pipelineRunName);
+                  const isActiveRun =
+                    card.id === pipelineCardId && (setupStatus !== 'idle' || !!pipelineRunName);
 
                   return (
                     <GalleryItem key={card.id}>
@@ -493,13 +548,45 @@ const DemosPage: FC = () => {
                         isFullHeight
                         isClickable
                         isSelectable
-                        onClick={() => handleCardClick(card)}
+                        onClick={() => {
+                          handleCardClick(card);
+                        }}
                         className="partner-labs-console-plugin__demo-card"
                       >
                         <CardTitle>
                           {t(card.title)}
+                          {card.pipelineRef && (
+                            <Label
+                              color="blue"
+                              isCompact
+                              className="partner-labs-console-plugin__card-badge"
+                            >
+                              {t('Pipeline')}
+                            </Label>
+                          )}
+                          {card.quickStartId && (
+                            <Label
+                              color="green"
+                              isCompact
+                              className="partner-labs-console-plugin__card-badge"
+                            >
+                              {t('Guided Walkthrough')}
+                            </Label>
+                          )}
+                          {!card.pipelineRef && !card.quickStartId && (
+                            <Label
+                              color="orange"
+                              isCompact
+                              className="partner-labs-console-plugin__card-badge"
+                            >
+                              {t('Virt Cookbook')}
+                            </Label>
+                          )}
                           {isActiveRun && isRunning && (
-                            <Spinner size="sm" className="partner-labs-console-plugin__card-spinner" />
+                            <Spinner
+                              size="sm"
+                              className="partner-labs-console-plugin__card-spinner"
+                            />
                           )}
                           {isActiveRun && overall === 'succeeded' && setupStatus === 'done' && (
                             <CheckCircleIcon className="partner-labs-console-plugin__card-status-success" />

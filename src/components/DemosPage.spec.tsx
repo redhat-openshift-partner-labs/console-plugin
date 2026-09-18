@@ -6,6 +6,7 @@ jest.mock('@openshift-console/dynamic-plugin-sdk', () => ({
   ListPageHeader: ({ title }: { title: string }) => <h1>{title}</h1>,
   useActiveNamespace: () => ['default', jest.fn()],
   useK8sWatchResource: () => [undefined, false, undefined],
+  useQuickStartContext: () => ({ setActiveQuickStart: jest.fn() }),
   k8sCreate: jest.fn(),
 }));
 
@@ -30,5 +31,6 @@ describe('DemosPage', () => {
     expect(screen.getByText('Creating Virtual Machines')).toBeInTheDocument();
     expect(screen.getByText('Custom VM Templates')).toBeInTheDocument();
     expect(screen.getByText('Build & Deploy Pipeline')).toBeInTheDocument();
+    expect(screen.getByText('VM Instancetypes & Preferences')).toBeInTheDocument();
   });
 });

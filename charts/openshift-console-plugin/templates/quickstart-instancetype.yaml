@@ -1,0 +1,333 @@
+{{- if .Values.plugin.quickStarts.instancetypePreference.enabled }}
+apiVersion: console.openshift.io/v1
+kind: ConsoleQuickStart
+metadata:
+  name: partner-labs-instancetype-preference
+  labels:
+    {{- include "openshift-console-plugin.labels" . | nindent 4 }}
+spec:
+  displayName: "VM Instancetypes & Preferences"
+  description: "Learn how instancetypes and preferences standardize virtual machine definitions in OpenShift Virtualization."
+  durationMinutes: 15
+  tags:
+    - virtualization
+    - kubevirt
+    - instancetype
+  prerequisites:
+    - "OpenShift 4.18+ with the OpenShift Virtualization operator installed"
+    - "Access to the `oc` and `virtctl` CLI tools"
+    - "Permission to create VirtualMachines in a namespace"
+  introduction: >-
+    In this Quick Start you will learn how **instancetypes** define reusable
+    compute-resource profiles (CPU, memory, GPU) and how **preferences** capture
+    OS-specific settings (firmware type, machine type, disk bus defaults) for
+    virtual machines.
+
+
+    Together they decouple the *size* of a VM from the *OS behavior it expects*,
+    producing shorter, more maintainable VM manifests. Instead of specifying
+    30+ lines of domain spec in every VirtualMachine, you reference an
+    instancetype and a preference by name.
+  tasks:
+    - title: "Discover available instancetypes and preferences"
+      description: >-
+        OpenShift Virtualization ships predefined **cluster instancetypes** and
+        **cluster preferences** you can use immediately.
+
+
+        1. List all cluster-scoped instancetypes:
+
+        `oc get virtualmachineclusterinstancetypes`{{"{{execute}}"}}
+
+
+        Notice the naming convention — a category letter followed by a generation
+        and t-shirt size (e.g. `u1.medium`, `cx1.xlarge`, `m1.2xlarge`).
+        Categories include **U** (General Purpose, 1:4 CPU-to-RAM), **O**
+        (Overcommitted), **CX** (Compute Exclusive, 1:2), **M** (Memory
+        Intensive, 1:8), and **N** (Network / DPDK).
+
+
+        2. Inspect a specific instancetype to see its CPU and memory values:
+
+        `oc get virtualmachineclusterinstancetype u1.medium -o yaml`{{"{{execute}}"}}
+
+
+        3. List all cluster-scoped preferences:
+
+        `oc get virtualmachineclusterpreferences`{{"{{execute}}"}}
+
+
+        Preferences are named after the OS they target — `fedora`, `rhel.9`,
+        `rhel.10`, `windows.11`, etc.
+
+
+        4. Inspect the Fedora preference to see firmware, CPU topology, and
+        device bus defaults:
+
+        `oc get virtualmachineclusterpreference fedora -o yaml`{{"{{execute}}"}}
+      review:
+        instructions: >-
+          Did you see a list of cluster instancetypes (e.g. `u1.medium`,
+          `cx1.large`) and cluster preferences (e.g. `rhel.9`, `fedora`)?
+        failedTaskHelp: >-
+          Ensure the OpenShift Virtualization operator is installed and that you
+          have read access to cluster-scoped resources. Try running
+          `oc get virtualmachineclusterinstancetypes`{{"{{execute}}"}} again.
+      summary:
+        success: "You discovered the predefined instancetypes and preferences."
+        failed: "Try the steps again."
+
+    - title: "Create a VM using instancetype and preference"
+      description: >-
+        Create a VirtualMachine that references an instancetype and preference
+        instead of specifying CPU, memory, and firmware settings inline.
+
+
+        1. Create a project for this tutorial:
+
+        `oc new-project instancetype-demo`{{"{{execute}}"}}
+
+
+        2. Save the following manifest as `vm-with-instancetype.yaml`:
+
+
+        ```
+        apiVersion: kubevirt.io/v1
+        kind: VirtualMachine
+        metadata:
+          name: fedora-instancetype-demo
+          namespace: instancetype-demo
+        spec:
+          instancetype:
+            name: u1.medium
+            kind: VirtualMachineClusterInstancetype
+          preference:
+            name: fedora
+            kind: VirtualMachineClusterPreference
+          runStrategy: Always
+          dataVolumeTemplates:
+            - metadata:
+                name: fedora-instancetype-demo
+              spec:
+                sourceRef:
+                  kind: DataSource
+                  name: fedora
+                  namespace: openshift-virtualization-os-images
+                storage:
+                  resources:
+                    requests:
+                      storage: 30Gi
+          template:
+            metadata:
+              labels:
+                kubevirt.io/domain: fedora-instancetype-demo
+            spec:
+              domain:
+                devices:
+                  disks:
+                    - name: rootdisk
+                      disk: { bus: virtio }
+                    - name: cloudinitdisk
+                      disk: { bus: virtio }
+                  interfaces:
+                    - name: default
+                      masquerade: {}
+              networks:
+                - name: default
+                  pod: {}
+              volumes:
+                - name: rootdisk
+                  dataVolume:
+                    name: fedora-instancetype-demo
+                - name: cloudinitdisk
+                  cloudInitNoCloud:
+                    userData: |
+                      #cloud-config
+                      user: fedora
+                      password: changeme123
+                      chpasswd:
+                        expire: false
+                      ssh_pwauth: true
+        ```{{"{{copy}}"}}
+
+
+        3. Apply the manifest:
+
+        `oc apply -f vm-with-instancetype.yaml`{{"{{execute}}"}}
+
+
+        4. Wait for the VM to reach Running state:
+
+        `oc get vm fedora-instancetype-demo -w`{{"{{execute}}"}}
+
+
+        Press **Ctrl+C** once the VM shows `Running`.
+      review:
+        instructions: >-
+          Is the VirtualMachine created? Does
+          `oc get vm fedora-instancetype-demo -o yaml` show `spec.instancetype`
+          and `spec.preference` fields?
+        failedTaskHelp: >-
+          Ensure your YAML contains both `spec.instancetype.name` and
+          `spec.preference.name`. Check
+          `oc describe vm fedora-instancetype-demo`{{"{{execute}}"}}
+          for error events.
+      summary:
+        success: "You created a VM using an instancetype and preference reference."
+        failed: "Try the steps again."
+
+    - title: "Inspect the resolved VMI spec"
+      description: >-
+        When a VM starts, OpenShift Virtualization merges the instancetype and
+        preference settings into a fully resolved **VirtualMachineInstance**
+        (VMI). Inspect it to see the actual configuration QEMU/KVM is using.
+
+
+        1. View the resolved domain spec on the running VMI:
+
+        `oc get vmi fedora-instancetype-demo -o yaml`{{"{{execute}}"}}
+
+
+        Look at `spec.domain` — you will see the CPU count, memory, machine
+        type, firmware, and device settings that came from `u1.medium` and the
+        `fedora` preference, even though your VM manifest did not specify them.
+
+
+        2. See just the CPU and memory values:
+
+        `oc get vmi fedora-instancetype-demo -o jsonpath='{.spec.domain.cpu}'`{{"{{execute}}"}}
+
+        `oc get vmi fedora-instancetype-demo -o jsonpath='{.spec.domain.memory}'`{{"{{execute}}"}}
+
+
+        For `u1.medium` you should see 1 vCPU and 4Gi of memory, matching the
+        General Purpose category's 1:4 ratio.
+
+
+        > **Note:** The `spec.instancetype` field and
+        `spec.template.spec.domain.cpu` / `spec.template.spec.domain.memory`
+        fields are mutually exclusive. Setting both causes a validation error.
+      review:
+        instructions: >-
+          Does the VMI spec show resolved domain resources (CPU cores, memory,
+          machine type) that were not in your original VM manifest?
+        failedTaskHelp: >-
+          Ensure the VM is in Running state. Run
+          `oc get vmi`{{"{{execute}}"}} and verify the VMI
+          exists before inspecting its YAML.
+      summary:
+        success: "You verified how instancetype and preference resolve at runtime."
+        failed: "Try the steps again."
+
+    - title: "Create a custom instancetype and preference"
+      description: >-
+        Predefined cluster resources cover common workloads, but you can also
+        create **namespace-scoped** custom instancetypes and preferences for
+        specialized configurations.
+
+
+        1. Create a custom instancetype with 4 CPUs and 8Gi memory:
+
+
+        ```
+        apiVersion: instancetype.kubevirt.io/v1beta1
+        kind: VirtualMachineInstancetype
+        metadata:
+          name: app-server-4c8g
+          namespace: instancetype-demo
+        spec:
+          cpu:
+            guest: 4
+          memory:
+            guest: 8Gi
+        ```{{"{{copy}}"}}
+
+
+        `oc apply -f custom-instancetype.yaml`{{"{{execute}}"}}
+
+
+        2. Create a custom preference for a Linux server:
+
+
+        ```
+        apiVersion: instancetype.kubevirt.io/v1beta1
+        kind: VirtualMachinePreference
+        metadata:
+          name: my-linux-server
+          namespace: instancetype-demo
+        spec:
+          cpu:
+            preferredCPUTopology: cores
+          firmware:
+            preferredUseEfi: true
+            preferredUseSecureBoot: false
+          devices:
+            preferredDiskBus: virtio
+            preferredInterfaceModel: virtio
+        ```{{"{{copy}}"}}
+
+
+        `oc apply -f custom-preference.yaml`{{"{{execute}}"}}
+
+
+        3. Create a VM referencing these custom resources — set
+        `spec.instancetype.kind: VirtualMachineInstancetype` and
+        `spec.preference.kind: VirtualMachinePreference` (namespace-scoped
+        kinds, not cluster-scoped).
+
+
+        4. Verify the custom values were applied:
+
+        `oc get vmi custom-instancetype-demo -o jsonpath='{.spec.domain.cpu.cores}'`{{"{{execute}}"}}
+
+        You should see `4`, matching your custom instancetype.
+      review:
+        instructions: >-
+          Did you create a custom `VirtualMachineInstancetype` and
+          `VirtualMachinePreference`, and a VM that uses them?
+        failedTaskHelp: >-
+          Ensure both custom resources were created in the same namespace as the
+          VM (`instancetype-demo`). Run
+          `oc get virtualmachineinstancetypes -n instancetype-demo`{{"{{execute}}"}} to verify.
+      summary:
+        success: "You created and used custom instancetype and preference resources."
+        failed: "Try the steps again."
+
+    - title: "Clean up resources"
+      description: >-
+        Remove all resources created during this Quick Start.
+
+
+        Delete the entire project and all its contents:
+
+        `oc delete project instancetype-demo`{{"{{execute}}"}}
+
+
+        This removes all VMs, custom instancetypes, custom preferences,
+        DataVolumes, and PVCs in the namespace.
+      review:
+        instructions: >-
+          Is the `instancetype-demo` project deleted?
+          Run `oc get project instancetype-demo`{{"{{execute}}"}} — it should return not found.
+        failedTaskHelp: >-
+          Run `oc delete project instancetype-demo`{{"{{execute}}"}} and wait for the namespace
+          to terminate.
+      summary:
+        success: "You cleaned up all resources. Well done!"
+        failed: "Try the steps again."
+  conclusion: >-
+    Congratulations! You learned how **instancetypes** and **preferences** work
+    together in OpenShift Virtualization to standardize VM definitions. Key
+    takeaways:
+
+    - Instancetypes define reusable compute sizes (CPU, memory)
+
+    - Preferences define OS-specific machine settings (firmware, topology, device defaults)
+
+    - Using them reduces VM manifests from 30+ lines to a few references
+
+    - Custom namespace-scoped variants let you define organization-specific configurations
+
+    - The resolved configuration is visible on the running VirtualMachineInstance
+  nextQuickStart: []
+{{- end }}

@@ -35,7 +35,9 @@ interface DemoCard {
   cookbook: CookbookSection[];
 }
 
-const cards = (Array.isArray(cardsData) ? cardsData : (cardsData as { default: DemoCard[] }).default) as DemoCard[];
+const cards = (
+  Array.isArray(cardsData) ? cardsData : (cardsData as { default: DemoCard[] }).default
+) as DemoCard[];
 
 const DataSourceModel = {
   apiVersion: 'v1beta1',
@@ -123,8 +125,12 @@ const CommandBlock: FC<{
           const header = 'NAME                          SOURCE STATUS         AGE';
           const rows = items.map((ds) => {
             const name = (ds.metadata?.name ?? '').padEnd(30);
-            const conditions = ((ds as Record<string, unknown>).status as Record<string, unknown[]>)?.conditions ?? [];
-            const ready = (conditions as Array<{ type: string; status: string }>).find((c) => c.type === 'Ready');
+            const conditions =
+              ((ds as Record<string, unknown>).status as Record<string, unknown[]>)?.conditions ??
+              [];
+            const ready = (conditions as { type: string; status: string }[]).find(
+              (c) => c.type === 'Ready',
+            );
             const sourceStatus = ready?.status === 'True' ? 'Ready' : 'Not Ready';
             const created = ds.metadata?.creationTimestamp
               ? new Date(ds.metadata.creationTimestamp).toLocaleDateString()
@@ -133,7 +139,9 @@ const CommandBlock: FC<{
           });
           onResult({
             status: 'success',
-            message: t('Found {{count}} DataSources in openshift-virtualization-os-images', { count: items.length }),
+            message: t('Found {{count}} DataSources in openshift-virtualization-os-images', {
+              count: items.length,
+            }),
             detail: [header, ...rows].join('\n'),
           });
           break;
@@ -148,7 +156,9 @@ const CommandBlock: FC<{
           delete yaml.metadata?.managedFields;
           onResult({
             status: 'success',
-            message: t('Template "{{name}}" in namespace "openshift"', { name: template.metadata?.name }),
+            message: t('Template "{{name}}" in namespace "openshift"', {
+              name: template.metadata?.name,
+            }),
             detail: JSON.stringify(yaml, null, 2),
           });
           break;
@@ -211,7 +221,10 @@ const CommandBlock: FC<{
           });
           onResult({
             status: 'success',
-            message: t('VM "{{name}}" created in namespace "{{ns}}"', { name: vmName, ns: namespace }),
+            message: t('VM "{{name}}" created in namespace "{{ns}}"', {
+              name: vmName,
+              ns: namespace,
+            }),
           });
           break;
         }
@@ -227,13 +240,16 @@ const CommandBlock: FC<{
           const header = 'NAME                                DESCRIPTION';
           const rows = vmTemplates.map((tpl) => {
             const name = (tpl.metadata?.name ?? '').padEnd(36);
-            const desc = ((tpl.metadata?.annotations ?? {}) as Record<string, string>)['description'] ?? '';
+            const desc =
+              ((tpl.metadata?.annotations ?? {}) as Record<string, string>).description ?? '';
             const truncated = desc.length > 80 ? `${desc.slice(0, 77)}...` : desc;
             return `${name} ${truncated}`;
           });
           onResult({
             status: 'success',
-            message: t('Found {{count}} VM templates in openshift namespace', { count: vmTemplates.length }),
+            message: t('Found {{count}} VM templates in openshift namespace', {
+              count: vmTemplates.length,
+            }),
             detail: [header, ...rows].join('\n'),
           });
           break;
@@ -248,7 +264,9 @@ const CommandBlock: FC<{
           delete cleaned.metadata?.managedFields;
           onResult({
             status: 'success',
-            message: t('Template "{{name}}" in namespace "openshift"', { name: template.metadata?.name }),
+            message: t('Template "{{name}}" in namespace "openshift"', {
+              name: template.metadata?.name,
+            }),
             detail: JSON.stringify(cleaned, null, 2),
           });
           break;
@@ -330,7 +348,8 @@ const CommandBlock: FC<{
                       { dataVolume: { name: vmName }, name: 'rootdisk' },
                       {
                         cloudInitNoCloud: {
-                          userData: '#cloud-config\nuser: cloud-user\npassword: demo-pass\nchpasswd:\n  expire: false\n',
+                          userData:
+                            '#cloud-config\nuser: cloud-user\npassword: demo-pass\nchpasswd:\n  expire: false\n',
                         },
                         name: 'cloudinitdisk',
                       },
@@ -342,7 +361,10 @@ const CommandBlock: FC<{
           });
           onResult({
             status: 'success',
-            message: t('VM "{{name}}" created in namespace "template-example" (Halted — use virtctl start to boot)', { name: vmName }),
+            message: t(
+              'VM "{{name}}" created in namespace "template-example" (Halted — use virtctl start to boot)',
+              { name: vmName },
+            ),
           });
           break;
         }
@@ -354,7 +376,9 @@ const CommandBlock: FC<{
           const header = 'NAME                              STATUS         CREATED';
           const rows = vms.map((vm) => {
             const name = (vm.metadata?.name ?? '').padEnd(34);
-            const status = (((vm as Record<string, unknown>).status as Record<string, unknown>)?.printableStatus as string) ?? 'Unknown';
+            const status =
+              (((vm as Record<string, unknown>).status as Record<string, unknown>)
+                ?.printableStatus as string) ?? 'Unknown';
             const created = vm.metadata?.creationTimestamp
               ? new Date(vm.metadata.creationTimestamp).toLocaleString()
               : '';
@@ -379,11 +403,12 @@ const CommandBlock: FC<{
                 namespace,
                 annotations: {
                   'defaults.template.kubevirt.io/disk': 'rootdisk',
-                  description: 'Custom RHEL 9 template with auto-start and configurable cloud-init user',
-                  'iconClass': 'icon-rhel',
+                  description:
+                    'Custom RHEL 9 template with auto-start and configurable cloud-init user',
+                  iconClass: 'icon-rhel',
                   'openshift.io/display-name': 'RHEL 9 Custom VM',
                   'openshift.io/provider-display-name': 'Partner Labs',
-                  'tags': 'kubevirt,virtualmachine,linux,rhel',
+                  tags: 'kubevirt,virtualmachine,linux,rhel',
                   'template.kubevirt.io/provider': 'Partner Labs',
                 },
                 labels: {
@@ -444,7 +469,8 @@ const CommandBlock: FC<{
                           { dataVolume: { name: '${NAME}' }, name: 'rootdisk' },
                           {
                             cloudInitNoCloud: {
-                              userData: '#cloud-config\nuser: ${CLOUD_INIT_USERNAME}\npassword: ${CLOUD_INIT_PASSWORD}\nchpasswd:\n  expire: false\n',
+                              userData:
+                                '#cloud-config\nuser: ${CLOUD_INIT_USERNAME}\npassword: ${CLOUD_INIT_PASSWORD}\nchpasswd:\n  expire: false\n',
                             },
                             name: 'cloudinitdisk',
                           },
@@ -455,17 +481,41 @@ const CommandBlock: FC<{
                 },
               ],
               parameters: [
-                { description: 'VM name', from: 'rhel9-custom-[a-z0-9]{6}', generate: 'expression', name: 'NAME' },
-                { description: 'Name of the DataSource to clone', name: 'DATA_SOURCE_NAME', value: 'rhel9' },
-                { description: 'Namespace of the DataSource', name: 'DATA_SOURCE_NAMESPACE', value: 'openshift-virtualization-os-images' },
-                { description: 'Cloud-init username', name: 'CLOUD_INIT_USERNAME', value: 'shadowman' },
-                { description: 'Cloud-init password', from: '[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}', generate: 'expression', name: 'CLOUD_INIT_PASSWORD' },
+                {
+                  description: 'VM name',
+                  from: 'rhel9-custom-[a-z0-9]{6}',
+                  generate: 'expression',
+                  name: 'NAME',
+                },
+                {
+                  description: 'Name of the DataSource to clone',
+                  name: 'DATA_SOURCE_NAME',
+                  value: 'rhel9',
+                },
+                {
+                  description: 'Namespace of the DataSource',
+                  name: 'DATA_SOURCE_NAMESPACE',
+                  value: 'openshift-virtualization-os-images',
+                },
+                {
+                  description: 'Cloud-init username',
+                  name: 'CLOUD_INIT_USERNAME',
+                  value: 'shadowman',
+                },
+                {
+                  description: 'Cloud-init password',
+                  from: '[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}',
+                  generate: 'expression',
+                  name: 'CLOUD_INIT_PASSWORD',
+                },
               ],
             } as never,
           });
           onResult({
             status: 'success',
-            message: t('Custom template "rhel9-custom" created in namespace "{{ns}}"', { ns: namespace }),
+            message: t('Custom template "rhel9-custom" created in namespace "{{ns}}"', {
+              ns: namespace,
+            }),
           });
           break;
         }
@@ -477,7 +527,9 @@ const CommandBlock: FC<{
           const header = 'NAME                              STATUS         CREATED';
           const rows = vms.map((vm) => {
             const name = (vm.metadata?.name ?? '').padEnd(34);
-            const status = (((vm as Record<string, unknown>).status as Record<string, unknown>)?.printableStatus as string) ?? 'Unknown';
+            const status =
+              (((vm as Record<string, unknown>).status as Record<string, unknown>)
+                ?.printableStatus as string) ?? 'Unknown';
             const created = vm.metadata?.creationTimestamp
               ? new Date(vm.metadata.creationTimestamp).toLocaleString()
               : '';
@@ -491,7 +543,10 @@ const CommandBlock: FC<{
           break;
         }
         default:
-          onResult({ status: 'error', message: t('This command must be run manually in a terminal.') });
+          onResult({
+            status: 'error',
+            message: t('This command must be run manually in a terminal.'),
+          });
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -523,7 +578,9 @@ const CommandBlock: FC<{
       </Split>
       {result.status !== 'idle' && result.message && (
         <Alert
-          variant={result.status === 'error' ? 'danger' : result.status === 'success' ? 'success' : 'info'}
+          variant={
+            result.status === 'error' ? 'danger' : result.status === 'success' ? 'success' : 'info'
+          }
           isInline
           isPlain
           title={result.message}
@@ -586,7 +643,10 @@ const CookbookPage: FC = () => {
 
         {card.cookbook.map((section, sectionIdx) => (
           <div key={sectionIdx} className="partner-labs-console-plugin__cookbook-section">
-            <Title headingLevel={section.level === 2 ? 'h2' : 'h3'} size={section.level === 2 ? 'xl' : 'lg'}>
+            <Title
+              headingLevel={section.level === 2 ? 'h2' : 'h3'}
+              size={section.level === 2 ? 'xl' : 'lg'}
+            >
               {t(section.heading)}
             </Title>
 

@@ -26,9 +26,7 @@ function installHelmChart(helmPath: string) {
   );
   console.log('Helm install:', result);
 
-  exec(
-    `oc rollout status -n ${PLUGIN_NAME} deploy/${PLUGIN_NAME} -w --timeout=300s`,
-  );
+  exec(`oc rollout status -n ${PLUGIN_NAME} deploy/${PLUGIN_NAME} -w --timeout=300s`);
   exec('oc rollout status -w deploy/console -n openshift-console --timeout=300s');
 }
 

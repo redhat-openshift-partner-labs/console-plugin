@@ -34,6 +34,9 @@ plugin:
     create: true
     annotations: {}
     name: ""
+  quickStarts:
+    instancetypePreference:
+      enabled: true
   jobs:
     patchConsoles:
       enabled: true

@@ -14,3 +14,7 @@ import type * as SDK from '@openshift-console/dynamic-plugin-sdk';
 export const ListPageHeader: typeof SDK.ListPageHeader = ({ title }) => <h1>{title}</h1>;
 
 export const DocumentTitle: typeof SDK.DocumentTitle = () => null;
+
+export const useQuickStartContext = () => ({
+  setActiveQuickStart: jest.fn(),
+});

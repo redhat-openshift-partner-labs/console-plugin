@@ -7,6 +7,11 @@
   box-shadow: var(--pf-t--global--box-shadow--md);
 }
 
+.partner-labs-console-plugin__card-badge {
+  margin-left: var(--pf-t--global--spacer--sm);
+  vertical-align: middle;
+}
+
 .partner-labs-console-plugin__card-spinner {
   margin-left: var(--pf-t--global--spacer--sm);
   vertical-align: middle;
