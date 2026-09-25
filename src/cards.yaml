@@ -19,6 +19,11 @@
   title: Custom VM Templates
   body: Create and customize virtual machine templates for fast, repeatable deployments with predefined instance types, networking, and storage.
 
+- id: cloning-vms
+  kind: cookbook
+  title: Cloning Virtual Machines
+  body: Clone existing virtual machines for rapid deployment of identical or customized VM instances with pre-configured software and settings.
+
 - id: quickstart
   kind: quickstart
   title: VM Instancetypes & Preferences

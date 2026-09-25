@@ -58,6 +58,17 @@ const ProjectRequestModel = {
   namespaced: false,
 };
 
+const DataVolumeModel = {
+  apiVersion: 'v1beta1',
+  apiGroup: 'cdi.kubevirt.io',
+  kind: 'DataVolume',
+  abbr: 'DV',
+  label: 'DataVolume',
+  labelPlural: 'DataVolumes',
+  plural: 'datavolumes',
+  namespaced: true,
+};
+
 type CommandStatus = 'idle' | 'running' | 'success' | 'error';
 let nextCopyId = 0;
 
@@ -507,6 +518,209 @@ export const CommandBlock: FC<{
             status: 'success',
             message: t('Found {{count}} VMs in template-example', { count: vms.length }),
             detail: [header, ...rows].join('\n'),
+          });
+          break;
+        }
+        case 'create-cloning-namespace': {
+          await k8sCreate({
+            model: ProjectRequestModel,
+            data: {
+              apiVersion: 'project.openshift.io/v1',
+              kind: 'ProjectRequest',
+              metadata: { name: 'vm-cloning-demo' },
+              displayName: 'VM Cloning Demo',
+              description: 'Namespace for VM cloning demonstrations',
+            } as never,
+          });
+          onResult({
+            status: 'success',
+            message: t('Namespace "vm-cloning-demo" created'),
+          });
+          break;
+        }
+        case 'create-source-vm': {
+          const vmName = 'source-webserver';
+          await k8sCreate({
+            model: VirtualMachineModel,
+            ns: 'vm-cloning-demo',
+            data: {
+              apiVersion: 'kubevirt.io/v1',
+              kind: 'VirtualMachine',
+              metadata: {
+                name: vmName,
+                namespace: 'vm-cloning-demo',
+                labels: {
+                  [MANAGED_BY]: MANAGED_BY_VALUE,
+                },
+              },
+              spec: {
+                dataVolumeTemplates: [
+                  {
+                    apiVersion: 'cdi.kubevirt.io/v1beta1',
+                    kind: 'DataVolume',
+                    metadata: { name: `${vmName}-disk` },
+                    spec: {
+                      sourceRef: {
+                        kind: 'DataSource',
+                        name: 'fedora',
+                        namespace: 'openshift-virtualization-os-images',
+                      },
+                      storage: { resources: { requests: { storage: '30Gi' } } },
+                    },
+                  },
+                ],
+                runStrategy: 'RerunOnFailure',
+                template: {
+                  metadata: {
+                    labels: { 'kubevirt.io/domain': vmName },
+                  },
+                  spec: {
+                    domain: {
+                      cpu: { cores: 2 },
+                      devices: {
+                        disks: [
+                          { disk: { bus: 'virtio' }, name: 'rootdisk' },
+                          { disk: { bus: 'virtio' }, name: 'cloudinitdisk' },
+                        ],
+                        interfaces: [{ masquerade: {}, name: 'default' }],
+                        rng: {},
+                      },
+                      memory: { guest: '4Gi' },
+                    },
+                    networks: [{ name: 'default', pod: {} }],
+                    volumes: [
+                      { dataVolume: { name: `${vmName}-disk` }, name: 'rootdisk' },
+                      {
+                        cloudInitNoCloud: {
+                          userData:
+                            '#cloud-config\nuser: fedora\npassword: fedora123\nchpasswd:\n  expire: false\nssh_pwauth: true\nruncmd:\n  - dnf install -y nginx\n  - systemctl enable --now nginx\n  - echo "<h1>Source Webserver VM</h1><p>Hostname: $(hostname)</p>" > /usr/share/nginx/html/index.html\n  - firewall-cmd --permanent --add-service=http\n  - firewall-cmd --reload\n',
+                        },
+                        name: 'cloudinitdisk',
+                      },
+                    ],
+                  },
+                },
+              },
+            } as never,
+          });
+          onResult({
+            status: 'success',
+            message: t('Source VM "{{name}}" created in namespace "vm-cloning-demo"', {
+              name: vmName,
+            }),
+          });
+          break;
+        }
+        case 'create-clone-datavolume': {
+          const dvName = 'webserver-clone-2-disk';
+          await k8sCreate({
+            model: DataVolumeModel,
+            ns: 'vm-cloning-demo',
+            data: {
+              apiVersion: 'cdi.kubevirt.io/v1beta1',
+              kind: 'DataVolume',
+              metadata: {
+                name: dvName,
+                namespace: 'vm-cloning-demo',
+                annotations: {
+                  'cdi.kubevirt.io/storage.bind.immediate.requested': 'true',
+                },
+              },
+              spec: {
+                source: {
+                  pvc: {
+                    name: 'source-webserver-disk',
+                    namespace: 'vm-cloning-demo',
+                  },
+                },
+                storage: {
+                  accessModes: ['ReadWriteOnce'],
+                  resources: {
+                    requests: {
+                      storage: '30Gi',
+                    },
+                  },
+                },
+              },
+            } as never,
+          });
+          onResult({
+            status: 'success',
+            message: t('DataVolume "{{name}}" created to clone source VM PVC', {
+              name: dvName,
+            }),
+          });
+          break;
+        }
+        case 'create-clone-vm': {
+          const vmName = 'webserver-clone-2';
+          await k8sCreate({
+            model: VirtualMachineModel,
+            ns: 'vm-cloning-demo',
+            data: {
+              apiVersion: 'kubevirt.io/v1',
+              kind: 'VirtualMachine',
+              metadata: {
+                name: vmName,
+                namespace: 'vm-cloning-demo',
+                labels: {
+                  [MANAGED_BY]: MANAGED_BY_VALUE,
+                },
+              },
+              spec: {
+                runStrategy: 'Manual',
+                template: {
+                  metadata: {
+                    labels: { 'kubevirt.io/domain': vmName },
+                  },
+                  spec: {
+                    domain: {
+                      cpu: { cores: 2 },
+                      devices: {
+                        disks: [{ disk: { bus: 'virtio' }, name: 'rootdisk' }],
+                        interfaces: [{ masquerade: {}, name: 'default' }],
+                        rng: {},
+                      },
+                      memory: { guest: '4Gi' },
+                    },
+                    networks: [{ name: 'default', pod: {} }],
+                    volumes: [
+                      {
+                        name: 'rootdisk',
+                        persistentVolumeClaim: {
+                          claimName: 'webserver-clone-2-disk',
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            } as never,
+          });
+          onResult({
+            status: 'success',
+            message: t(
+              'VM "{{name}}" created from cloned PVC (Manual — use virtctl start to boot)',
+              { name: vmName },
+            ),
+          });
+          break;
+        }
+        case 'cleanup-cloning-demo': {
+          const vms = await k8sListItems({
+            model: VirtualMachineModel,
+            queryParams: { ns: 'vm-cloning-demo' },
+          });
+          const dvs = await k8sListItems({
+            model: DataVolumeModel,
+            queryParams: { ns: 'vm-cloning-demo' },
+          });
+          onResult({
+            status: 'success',
+            message: t(
+              'Found {{vmCount}} VMs and {{dvCount}} DataVolumes in vm-cloning-demo. Delete namespace to remove all resources.',
+              { vmCount: vms.length, dvCount: dvs.length },
+            ),
           });
           break;
         }
