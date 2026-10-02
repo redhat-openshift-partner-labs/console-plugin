@@ -1,0 +1,122 @@
+{{- if (index .Values.plugin.quickStarts "install-configure-ocpv-operator").enabled }}
+apiVersion: console.openshift.io/v1
+kind: ConsoleQuickStart
+metadata:
+  name: install-configure-ocpv-operator
+  labels:
+    {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
+spec:
+  displayName: "Install and configure OpenShift Virtualization"
+  description: >-
+    Learn how to install the OpenShift Virtualization Operator from OperatorHub,
+    create the HyperConverged resource, and verify that virtualization components,
+    boot sources, and default storage are ready for virtual machines.
+  durationMinutes: 10
+  tags:
+    - virtualization
+    - kubevirt
+    - operator
+  prerequisites:
+    - "OpenShift Container Platform 4.19 or later"
+    - "Cluster-admin privileges"
+    - "Access to the oc command-line tool"
+
+  introduction: |-
+    OpenShift Virtualization lets you run virtual machines alongside container
+    workloads on the same OpenShift cluster. In this Quick Start you will install
+    the OpenShift Virtualization Operator, create its HyperConverged resource,
+    and verify that the virtualization components are ready.
+
+  tasks:
+    - title: "Open OperatorHub"
+      description: |-
+        1. Sign in to the OpenShift web console as a cluster administrator.
+        2. Select **Operators** > **OperatorHub**.
+        3. Search for `Virtualization`.
+        4. Select **OpenShift Virtualization** from the Red Hat source.
+      review:
+        instructions: "Do you see the OpenShift Virtualization tile from Red Hat?"
+        failedTaskHelp: "Search OperatorHub for Virtualization."
+      summary:
+        success: "You found the OpenShift Virtualization Operator."
+        failed: "Try the steps again."
+
+    - title: "Install the Operator"
+      description: |-
+        1. Click **Install**.
+        2. Keep the default channel and automatic approval settings.
+        3. Click **Install**.
+        4. Wait until installation completes.
+      review:
+        instructions: "Does the Operator show as successfully installed?"
+        failedTaskHelp: "Wait for the installation to finish."
+      summary:
+        success: "The Operator is installed."
+        failed: "The Operator is not ready yet."
+
+    - title: "Create the HyperConverged resource"
+      description: |-
+        1. Click **Create HyperConverged**.
+        2. Keep the default configuration.
+        3. Click **Create**.
+        4. Wait for deployment to complete.
+      review:
+        instructions: |-
+          Does the kubevirt-hyperconverged resource exist in the
+          openshift-cnv namespace?
+        failedTaskHelp: "Confirm that the Operator installation completed."
+      summary:
+        success: "The HyperConverged resource was created."
+        failed: "The resource is not ready yet."
+
+    - title: "Verify the installation"
+      description: |-
+        Check the Operator status:
+
+        `oc get csv -n openshift-cnv`{{"{{execute}}"}}
+
+        Check the HyperConverged conditions:
+
+        `oc get hyperconverged kubevirt-hyperconverged \
+          -n openshift-cnv \
+          -o jsonpath='{range .status.conditions[*]}{.type}: {.status}{"\n"}{end}'
+        `{{"{{execute}}"}}
+
+        A healthy deployment should report:
+
+        - `Available: True`
+        - `Progressing: False`
+        - `Degraded: False`
+      review:
+        instructions: "Does the deployment report Available True and Degraded False?"
+        failedTaskHelp: "Inspect the HyperConverged resource conditions and events."
+      summary:
+        success: "OpenShift Virtualization is available."
+        failed: "The deployment needs more time or attention."
+
+    - title: "Check boot sources and storage"
+      description: |-
+        Check the default boot sources:
+
+        `oc get datasources -n openshift-virtualization-os-images
+        `{{"{{execute}}"}}
+
+        Check for a default StorageClass:
+        
+        `oc get storageclass
+        `{{"{{execute}}"}}
+
+        A default StorageClass is required for automatic VM disk provisioning.
+      review:
+        instructions: "Do boot sources exist, and is a default StorageClass configured?"
+        failedTaskHelp: "Wait for boot sources or configure default storage."
+      summary:
+        success: "Boot sources and storage were verified."
+        failed: "Review the boot-source and storage configuration."
+
+  conclusion: |-
+    Congratulations! You installed OpenShift Virtualization, created the
+    HyperConverged resource, and verified the deployment and storage prerequisites.
+
+  nextQuickStart: []
+{{- end }}

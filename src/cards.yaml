@@ -25,6 +25,12 @@
   body: Start a guided walkthrough defined by a ConsoleQuickStart resource.
   quickStartId: vm-instancetypes-and-preferences
 
+- id: install-configure-ocpv-operator
+  kind: quickstart
+  title: Install and configure OpenShift Virtualization
+  body: Install the OpenShift Virtualization Operator and verify its deployment.
+  quickStartId: install-configure-ocpv-operator
+
 - id: create-vm-web-console
   kind: quickstart
   title: Create a VM from the web console
