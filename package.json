@@ -20,7 +20,8 @@
     "start-console": "./start-console.sh",
     "i18n": "i18next-cli lint && i18next-cli extract",
     "test": "LANG=en_US.UTF-8 jest",
-    "lint": "eslint src integration-tests --fix --max-warnings 0 && stylelint 'src/**/*.css' --allow-empty-input --fix",
+    "validate:quickstarts": "node scripts/validate-quickstarts.ts",
+    "lint": "eslint src scripts integration-tests --fix --max-warnings 0 && stylelint 'src/**/*.css' --allow-empty-input --fix",
     "test-e2e": "playwright test --headed",
     "test-e2e-headless": "playwright test"
   },

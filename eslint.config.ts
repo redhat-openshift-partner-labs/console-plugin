@@ -72,6 +72,18 @@ export default tseslint.config(
     },
   },
   {
+    files: ['scripts/**/*.ts'],
+    languageOptions: {
+      globals: globals.node,
+      parserOptions: { projectService: true },
+    },
+    rules: { '@typescript-eslint/consistent-type-imports': 'error' },
+  },
+  {
+    ...jest.configs['flat/recommended'],
+    files: ['scripts/**/*.spec.ts'],
+  },
+  {
     ...playwright.configs['flat/recommended'],
     files: ['integration-tests/**/*.ts'],
     ...tseslint.configs.disableTypeChecked,
