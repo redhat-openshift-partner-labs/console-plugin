@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Switch } from 'react-router-dom';
+import { cards } from '../data/cards';
 
 let mockNamespace = 'demo';
 
@@ -71,7 +72,7 @@ describe('DemosPage', () => {
         <DemosPage />
       </MemoryRouter>,
     );
-    expect(screen.getAllByTestId(/^card-(?!action)/)).toHaveLength(8);
+    expect(screen.getAllByTestId(/^card-(?!action)/)).toHaveLength(cards.length);
     expect(screen.getByText('Custom Page')).toBeInTheDocument();
     expect(screen.getByText('How-to Use Demos')).toBeInTheDocument();
     expect(screen.getByText('Creating Virtual Machines')).toBeInTheDocument();
@@ -95,19 +96,18 @@ describe('DemosPage', () => {
     expect(await screen.findByTestId('example-route')).toBeInTheDocument();
   });
 
-  it.each([
-    ['vm-instancetypes-and-preferences', 'vm-instancetypes-and-preferences'],
-    ['create-vm-web-console', 'create-vm-web-console'],
-    ['vm-templates', 'vm-templates'],
-  ])('starts the ConsoleQuickStart from the %s card', (cardId, quickStartId) => {
-    render(
-      <MemoryRouter>
-        <DemosPage />
-      </MemoryRouter>,
-    );
-    fireEvent.click(screen.getByTestId(`card-action-${cardId}`));
-    expect(sdk.setActiveQuickStart).toHaveBeenCalledWith(quickStartId);
-  });
+  it.each(cards.filter((card) => card.kind === 'quickstart'))(
+    'starts the ConsoleQuickStart from the $id card',
+    ({ id, quickStartId }) => {
+      render(
+        <MemoryRouter>
+          <DemosPage />
+        </MemoryRouter>,
+      );
+      fireEvent.click(screen.getByTestId(`card-action-${id}`));
+      expect(sdk.setActiveQuickStart).toHaveBeenCalledWith(quickStartId);
+    },
+  );
 
   it('creates an inline Tekton PipelineRun', async () => {
     render(
@@ -189,7 +189,7 @@ describe('DemosPage', () => {
     fireEvent.change(search, { target: { value: 'no matching demo' } });
     expect(screen.getByText('No demos match your filters')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('clear-filters'));
-    expect(screen.getAllByTestId(/^card-(?!action)/)).toHaveLength(8);
+    expect(screen.getAllByTestId(/^card-(?!action)/)).toHaveLength(cards.length);
   });
 
   it('filters by kind and displays each action in the footer', () => {
