@@ -98,8 +98,9 @@ helm template partner-labs-console-plugin charts/partner-labs-console-plugin \
 oc get consolequickstart my-demo
 ```
 
-Add the card ID and CR name to the parameterized launch test in
-[`DemosPage.spec.tsx`](src/components/DemosPage.spec.tsx). Add an opening check
+The parameterized launch test in
+[`DemosPage.spec.tsx`](src/components/DemosPage.spec.tsx) discovers QuickStart cards
+from the registry automatically. Add an opening check
 in [`card-page.spec.ts`](integration-tests/tests/card-page.spec.ts), following
 the existing QuickStart tests: click `card-action-my-demo`, then assert
 the walkthrough heading and initial content. Run `yarn test` and verify the card
@@ -109,3 +110,32 @@ Setting `plugin.quickStarts.my-demo.enabled=false` omits the CR but leaves its
 card in the bundle. The gallery does not check whether the CR exists. If a card
 does not open its walkthrough, check the installed CR name, `quickStartId`, and
 the Helm switch first.
+
+## Validate a pull request locally
+
+With Node 24, the repository's Yarn 4.18.0, and Helm 4.2.4 on your PATH, run:
+
+```sh
+yarn install --immutable
+yarn validate:quickstarts
+yarn test --ci --runInBand
+```
+
+`validate:quickstarts` lints the chart and checks the rendered resources against
+the card registry and Helm switches. It validates required QuickStart fields,
+task reviews and summaries, YAML types and duplicate keys, and the shared naming
+convention. It renders defaults, all enabled, each individually disabled, and all
+disabled; disabling one walkthrough must not change another. New templates and
+cards are discovered automatically. Failures identify the file/resource and field
+or rendering scenario to fix.
+
+The GitHub Actions check **Validate virt-cookbook quickstarts** runs on every PR,
+including unrelated-file changes, and can also run manually. It uses no cluster
+credentials or secrets. Repository administrators can make that check required
+after its first successful run; adding the workflow does not change branch rules.
+
+These checks run locally without a cluster after dependencies are installed. They
+do not execute embedded commands, verify external links, or prove that a
+walkthrough works on a particular OpenShift release. Keep the cluster opening
+check described above for runtime verification. Console markers such as
+`{{execute}}` and `{{copy}}` are valid rendered content and are preserved.
