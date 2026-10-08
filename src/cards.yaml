@@ -31,6 +31,12 @@
   body: Install the OpenShift Virtualization Operator and verify its deployment.
   quickStartId: install-configure-ocpv-operator
 
+- id: install-lvm-storage-operator
+  kind: quickstart
+  title: Install the LVM Storage Operator
+  body: Install and configure LVM storage on a cluster with a spare local disk.
+  quickStartId: install-lvm-storage-operator
+
 - id: create-vm-web-console
   kind: quickstart
   title: Create a VM from the web console

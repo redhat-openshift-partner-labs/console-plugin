@@ -128,6 +128,18 @@ test.describe('Console plugin cards', () => {
     await expect(page.getByText('Open OperatorHub', { exact: true })).toBeVisible();
   });
 
+  test('opens the LVM Storage Operator quick start', async ({ page }) => {
+    await page.goto('/partner-labs-demos');
+    await page.getByTestId('card-action-install-lvm-storage-operator').click();
+    await expect(
+      page.getByRole('heading', {
+        name: 'Install the LVM Storage Operator',
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(page.getByText('Identify a spare disk', { exact: true })).toBeVisible();
+  });
+
   test('opens the custom VM templates quick start', async ({ page }) => {
     await page.goto('/partner-labs-demos');
     await page.getByTestId('card-action-vm-templates').click();
