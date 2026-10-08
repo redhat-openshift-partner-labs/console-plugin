@@ -1,0 +1,286 @@
+{{- if (index .Values.plugin.quickStarts "install-lvm-storage-operator").enabled }}
+apiVersion: console.openshift.io/v1
+kind: ConsoleQuickStart
+metadata:
+  name: install-lvm-storage-operator
+  labels:
+    {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
+spec:
+  displayName: "Install the LVM Storage Operator"
+  description: >-
+    Install and configure the LVM Storage Operator on a cluster with a spare
+    local disk, create an LVMCluster, configure default storage, and verify
+    persistent volume provisioning.
+  durationMinutes: 20
+  tags:
+    - storage
+    - lvm
+    - operator
+  prerequisites:
+    - "OpenShift Container Platform 4.19 or later"
+    - "Cluster-admin privileges"
+    - "At least one spare local disk on a worker node"
+    - "Access to the oc command-line tool"
+  introduction: |-
+    The LVM Storage Operator provides dynamic local storage by managing
+    Logical Volume Manager (LVM) volume groups and thin pools on cluster nodes.
+    It is useful for bare-metal and Single Node OpenShift clusters with spare
+    local disks.
+
+    This Quick Start installs the operator, creates an LVMCluster, verifies the
+    generated StorageClass, and tests provisioning with a PVC and pod.
+
+    **Important:** Never select the operating system disk. The
+    `forceWipeDevicesAndDestroyAllData` option permanently destroys data on the
+    selected disk and is intentionally omitted from the default configuration.
+  tasks:
+    - title: "Identify a spare disk"
+      description: |-
+        Identify a disk that can be dedicated to LVM storage. Do not use the
+        disk containing the operating system.
+
+        1. List the cluster nodes:
+
+        `oc get nodes`{{"{{execute}}"}}
+
+        2. Replace `<node-name>` with a worker node name and inspect its block
+           devices:
+
+        `oc debug node/<node-name> -- chroot /host lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT,MODEL`{{"{{execute}}"}}
+
+        3. Check whether a candidate disk already contains LVM metadata:
+
+        `oc debug node/<node-name> -- chroot /host pvs`{{"{{execute}}"}}
+
+        4. Record a stable device path when possible:
+
+        `oc debug node/<node-name> -- chroot /host ls -la /dev/disk/by-path/`{{"{{execute}}"}}
+
+        You will use the selected path, such as `/dev/sdb` or a
+        `/dev/disk/by-path/...` path, in the LVMCluster configuration.
+      review:
+        instructions: >-
+          Did you identify a spare disk and confirm that it is not the node's
+          operating system disk?
+        failedTaskHelp: >-
+          Inspect the node with `lsblk`, `pvs`, and the `/dev/disk/by-path/`
+          directory before continuing. Do not guess the device path.
+      summary:
+        success: "You identified a disk for LVM storage."
+        failed: "Confirm the disk selection before continuing."
+
+    - title: "Install the LVM Storage Operator"
+      description: |-
+        Install the operator from the OpenShift web console.
+
+        1. If present, click the [perspective switcher]{{"{{highlight qs-perspective-switcher}}"}} at the top of the navigation and select **Core platform**.
+        2. From the Core platform perspective, select **Software Catalog** from the [Ecosystem]{{"{{highlight qs-ecosystem}}"}} section.
+        3. Search for **LVM Storage**.
+        4. Select the **LVM Storage** card with the **Red Hat** source label and click **Install**.
+        5. Keep the default settings and click **Install**.
+        6. Wait until installation completes.
+
+        Verify the operator from the CLI:
+
+        `oc get csv -n openshift-lvm-storage`{{"{{execute}}"}}
+
+        `oc get pods -n openshift-lvm-storage`{{"{{execute}}"}}
+
+        The `lvms-operator` pod should be `Running`. The `vg-manager` pod is
+        created after the LVMCluster is created.
+      review:
+        instructions: >-
+          Does the LVM Storage Operator show as installed and does the
+          `lvms-operator` pod show `Running`?
+        failedTaskHelp: >-
+          Wait for the ClusterServiceVersion to reach `Succeeded` and inspect
+          operator events if the pod does not become ready.
+      summary:
+        success: "The LVM Storage Operator is installed."
+        failed: "The LVM Storage Operator is not ready yet."
+
+    - title: "Create the LVMCluster"
+      description: |-
+        Create an LVMCluster using the disk path you identified earlier.
+        Replace `/dev/sdb` in the manifest before running it.
+
+        This example does not wipe existing data. Use the destructive wipe
+        option only after verifying the device and confirming that its data can
+        be permanently destroyed.
+
+        Save the following as `lvmcluster.yaml`:
+
+        ```
+        apiVersion: lvm.topolvm.io/v1alpha1
+        kind: LVMCluster
+        metadata:
+          name: lvmcluster
+          namespace: openshift-lvm-storage
+        spec:
+          storage:
+            deviceClasses:
+              - name: vg1
+                default: true
+                thinPoolConfig:
+                  name: thin-pool-1
+                  sizePercent: 90
+                  overprovisionRatio: 10
+                nodeSelector:
+                  nodeSelectorTerms:
+                    - matchExpressions:
+                        - key: node-role.kubernetes.io/worker
+                          operator: In
+                          values:
+                            - ""
+                deviceSelector:
+                  paths:
+                    - /dev/sdb
+        ```{{"{{copy}}"}}
+
+        Apply the manifest:
+
+        `oc apply -f lvmcluster.yaml`{{"{{execute}}"}}
+
+        If the disk contains data that must be destroyed, add
+        `forceWipeDevicesAndDestroyAllData: true` below `deviceSelector.paths`
+        only after performing the safety checks from the previous task.
+      review:
+        instructions: >-
+          Does the `lvmcluster` resource exist in the
+          `openshift-lvm-storage` namespace?
+        failedTaskHelp: >-
+          Check the resource and operator events with
+          `oc describe lvmcluster lvmcluster -n openshift-lvm-storage`.
+      summary:
+        success: "You created the LVMCluster configuration."
+        failed: "The LVMCluster was not created successfully."
+
+    - title: "Verify the LVMCluster"
+      description: |-
+        Check that the LVMCluster is ready and that the volume group and thin
+        pool were created on the node.
+
+        `oc get lvmcluster -n openshift-lvm-storage`{{"{{execute}}"}}
+
+        `oc get pods -n openshift-lvm-storage`{{"{{execute}}"}}
+
+        `oc debug node/<node-name> -- chroot /host vgs`{{"{{execute}}"}}
+
+        `oc debug node/<node-name> -- chroot /host lvs`{{"{{execute}}"}}
+
+        The LVMCluster should report `Ready`. The `vg1` volume group and
+        `thin-pool-1` thin pool should be present.
+      review:
+        instructions: >-
+          Does the LVMCluster report `Ready`, and do `vg1` and
+          `thin-pool-1` appear on the node?
+        failedTaskHelp: >-
+          Wait for reconciliation and inspect
+          `oc describe lvmcluster lvmcluster -n openshift-lvm-storage`.
+      summary:
+        success: "The LVMCluster and its LVM resources are ready."
+        failed: "The LVMCluster still needs attention."
+
+    - title: "Set the LVM StorageClass as default"
+      description: |-
+        The operator creates an `lvms-vg1` StorageClass but does not make it
+        the cluster default automatically.
+
+        1. Confirm the StorageClass exists:
+
+        `oc get storageclass`{{"{{execute}}"}}
+
+        2. If this is the StorageClass you want as the cluster default, apply
+           the default annotation:
+
+        `oc patch storageclass lvms-vg1 -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'`{{"{{execute}}"}}
+
+        Do not create multiple default StorageClasses unless you understand how
+        your cluster handles them. This default is useful for OpenShift
+        Virtualization DataVolumes and VM disks.
+      review:
+        instructions: "Is lvms-vg1 present and marked as the default StorageClass?"
+        failedTaskHelp: >-
+          Check the StorageClass name and annotations with
+          `oc get storageclass -o yaml`.
+      summary:
+        success: "The LVM StorageClass is configured as default."
+        failed: "The default StorageClass still needs configuration."
+
+    - title: "Test storage provisioning"
+      description: |-
+        Create a PVC and pod to verify that LVM storage provisions and mounts
+        successfully.
+
+        Save the following as `lvm-test-resources.yaml`:
+
+        ```
+        oc apply -f - <<'EOF'
+        apiVersion: v1
+        kind: PersistentVolumeClaim
+        metadata:
+          name: lvms-test-pvc
+          namespace: default
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 10Gi
+          storageClassName: lvms-vg1
+        ____
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: lvms-test-pod
+          namespace: default
+        spec:
+          containers:
+            - name: test
+              image: registry.access.redhat.com/ubi9/ubi:latest
+              command: ["sleep", "3600"]
+              volumeMounts:
+                - name: data
+                  mountPath: /data
+          volumes:
+            - name: data
+              persistentVolumeClaim:
+                claimName: lvms-test-pvc
+        EOF
+        ```{{"{{execute}}"}}
+
+        Apply the test resources:
+
+        `oc apply -f lvm-test-resources.yaml`{{"{{execute}}"}}
+
+        Wait for the pod and write a file to the mounted volume:
+
+        `oc wait --for=condition=Ready pod/lvms-test-pod --timeout=120s`{{"{{execute}}"}}
+
+        `oc exec lvms-test-pod -- sh -c "echo 'LVM Storage Test' > /data/test.txt && cat /data/test.txt"`{{"{{execute}}"}}
+
+        Clean up the test resources when finished:
+
+        `oc delete pod lvms-test-pod`{{"{{execute}}"}}
+
+        `oc delete pvc lvms-test-pvc`{{"{{execute}}"}}
+      review:
+        instructions: >-
+          Did the PVC become `Bound`, did the pod become `Ready`, and did the
+          write test print `LVM Storage Test`?
+        failedTaskHelp: >-
+          Inspect the PVC and pod with `oc describe pvc lvms-test-pvc` and
+          `oc describe pod lvms-test-pod`.
+      summary:
+        success: "LVM storage successfully provisioned and mounted a volume."
+        failed: "Storage provisioning did not complete successfully."
+  conclusion: |-
+    Congratulations! You installed the LVM Storage Operator, created an
+    LVMCluster, configured a default StorageClass, and verified storage
+    provisioning with a PVC and pod.
+
+    Remember that disk selection is cluster-specific and that enabling
+    `forceWipeDevicesAndDestroyAllData` permanently destroys data on the target
+    disk.
+  nextQuickStart: []
+{{- end }}
