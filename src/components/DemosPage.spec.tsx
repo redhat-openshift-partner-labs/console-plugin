@@ -65,7 +65,7 @@ beforeEach(() => {
 });
 
 describe('DemosPage', () => {
-  it('shows the three interaction types and the cookbook pages', () => {
+  it('shows all demo cards', () => {
     render(
       <MemoryRouter>
         <DemosPage />
@@ -76,6 +76,7 @@ describe('DemosPage', () => {
     expect(screen.getByText('How-to Use Demos')).toBeInTheDocument();
     expect(screen.getByText('Creating Virtual Machines')).toBeInTheDocument();
     expect(screen.getByText('Custom VM Templates')).toBeInTheDocument();
+    expect(screen.getByText('Cloning Virtual Machines')).toBeInTheDocument();
     expect(screen.getByText('VM Instancetypes & Preferences')).toBeInTheDocument();
     expect(screen.getByText('Install and configure OpenShift Virtualization')).toBeInTheDocument();
     expect(screen.getByText('Create a VM from the web console')).toBeInTheDocument();

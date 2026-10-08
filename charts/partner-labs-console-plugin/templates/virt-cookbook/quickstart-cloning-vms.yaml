@@ -1,0 +1,584 @@
+{{- if .Values.plugin.quickStarts.cloningVMs.enabled }}
+apiVersion: console.openshift.io/v1
+kind: ConsoleQuickStart
+metadata:
+  name: partner-labs-cloning-vms
+  labels:
+    {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
+spec:
+  displayName: "Cloning Virtual Machines"
+  description: "Clone existing virtual machines for rapid deployment of identical or customized VM instances with pre-configured software and settings."
+  durationMinutes: 20
+  tags:
+    - virtualization
+    - kubevirt
+    - cloning
+  prerequisites:
+    - "OpenShift 4.18+ with the OpenShift Virtualization operator installed"
+    - "Access to the `oc` and `virtctl` CLI tools"
+    - "Permission to create VirtualMachines in a namespace"
+    - "Storage class that supports volume cloning"
+  introduction: >-
+    In this Quick Start you will learn how to **clone virtual machines** in
+    OpenShift Virtualization to rapidly deploy identical or customized VM instances.
+    VM cloning creates copies of existing VMs with their entire disk contents,
+    configurations, and installed software, enabling fast environment provisioning.
+
+
+    **Key benefits of VM cloning:**
+
+    - Rapid deployment of pre-configured environments
+
+    - Consistent software and configuration across instances
+
+    - Accelerated development and testing workflows
+
+    - Quick scale-out for identical workloads
+
+    - Reduced time from deployment to production-ready state
+  tasks:
+    - title: "Create a namespace and source VM"
+      description: |-
+        First, create a dedicated namespace for the cloning demonstration and deploy a source VM that will be cloned.
+
+        ## Create the namespace
+
+        `oc create namespace vm-cloning-demo`{{"{{copy}}"}}
+
+        ## Deploy the source VM
+
+        Deploy a source VM with nginx pre-installed. This VM will serve as the base for all clones in this tutorial:
+
+        ```
+        cat <<'EOF' | oc apply -f -
+        apiVersion: kubevirt.io/v1
+        kind: VirtualMachine
+        metadata:
+          name: source-webserver
+          namespace: vm-cloning-demo
+        spec:
+          runStrategy: Always
+          template:
+            metadata:
+              labels:
+                kubevirt.io/domain: source-webserver
+            spec:
+              domain:
+                cpu:
+                  cores: 1
+                memory:
+                  guest: 2Gi
+                devices:
+                  disks:
+                    - name: rootdisk
+                      disk:
+                        bus: virtio
+                    - name: cloudinitdisk
+                      disk:
+                        bus: virtio
+                  interfaces:
+                    - name: default
+                      masquerade: {}
+              networks:
+                - name: default
+                  pod: {}
+              volumes:
+                - name: rootdisk
+                  dataVolume:
+                    name: source-webserver
+                - name: cloudinitdisk
+                  cloudInitNoCloud:
+                    userData: |
+                      #cloud-config
+                      user: fedora
+                      password: demo123
+                      chpasswd:
+                        expire: false
+                      ssh_pwauth: true
+                      runcmd:
+                        - dnf install -y nginx
+                        - systemctl enable --now nginx
+          dataVolumeTemplates:
+            - metadata:
+                name: source-webserver
+              spec:
+                sourceRef:
+                  kind: DataSource
+                  name: fedora
+                  namespace: openshift-virtualization-os-images
+                storage:
+                  resources:
+                    requests:
+                      storage: 30Gi
+        EOF
+        ```{{"{{copy}}"}}
+
+
+        ## Verify the VM is running
+
+        Wait for the VM to be running (this may take several minutes):
+
+        `oc get vmi -n vm-cloning-demo -w`{{"{{copy}}"}}
+
+        Press **Ctrl+C** once the VMI shows `Running`.
+
+
+        [The cloud-init password in this example is for demo purposes only. Always use strong passwords or SSH key authentication in production.]{{"{{"}}admonition note}}
+      review:
+        instructions: |-
+          Is the source-webserver VM created and running?
+
+          `oc get vmi -n vm-cloning-demo`{{"{{copy}}"}}
+
+          Does the VMI show `Running` state?
+        failedTaskHelp: |-
+          Ensure the namespace was created and the VM manifest was applied correctly.
+
+          Check for errors:
+
+          `oc describe vm source-webserver -n vm-cloning-demo`{{"{{copy}}"}}
+
+          Verify that OpenShift Virtualization is installed and the Fedora DataSource exists.
+      summary:
+        success: "You created a source VM with nginx pre-installed."
+        failed: "Try the steps again."
+
+    - title: "Clone using the web console"
+      description: |-
+        The web console provides the simplest method for cloning VMs. It automatically handles PVC cloning and creates a new VM with the cloned disk.
+
+        ## Clone via web console
+
+        1. Navigate to **Virtualization → VirtualMachines** in the OpenShift web console
+        2. Locate the VM you want to clone (**source-webserver**)
+        3. Click the **⋮** (Actions menu) next to the VM
+        4. Select **Clone**
+        5. Enter a name for the new VM (e.g., **webserver-clone-1**)
+        6. Optionally check **Start VirtualMachine once created** to start it immediately
+        7. Review the configuration details (Operating system, CPU, Memory, NICs, Disks)
+        8. Click **Clone**
+
+        The web console will clone the source VM PVC, create a new VM with the cloned disk, and preserve the VM configuration. Monitor the clone progress in the VirtualMachines list.
+
+        ## Verify the clone
+
+        Verify the cloned VM status:
+
+        `oc get vm -n vm-cloning-demo`{{"{{copy}}"}}
+
+        You should see both **source-webserver** and **webserver-clone-1**.
+      review:
+        instructions: |-
+          Did you successfully clone the VM using the web console?
+
+          `oc get vm -n vm-cloning-demo`{{"{{copy}}"}}
+
+          Do you see both VMs listed?
+        failedTaskHelp: |-
+          Ensure you selected the correct VM to clone. Check that your storage class supports volume cloning.
+
+          Verify the cloned PVC was created:
+
+          `oc get pvc -n vm-cloning-demo`{{"{{copy}}"}}
+      summary:
+        success: "You cloned a VM using the web console."
+        failed: "Try the steps again."
+
+    - title: "Clone using CLI (DataVolume method)"
+      description: |-
+        For automation, customization, or cross-namespace cloning, use the CLI method. This is the recommended CLI approach.
+
+        ## Identify the source PVC
+
+        First, identify the source VM PVC:
+
+        `oc get pvc -n vm-cloning-demo`{{"{{copy}}"}}
+
+        You should see a PVC named **source-webserver**.
+
+        ## Understanding clone methods
+
+        There are two methods for cloning PVCs, depending on your storage backend capabilities:
+
+        **Method 1: Direct PVC cloning** — Fast CSI-based cloning using storage snapshots. Requires CSI driver with snapshot support and may require stopping the source VM on some storage backends.
+
+        **Method 2: Snapshot-based cloning** — Works with any CSI storage backend that supports VolumeSnapshots. Works even when source VM is running.
+
+        [Your storage class must support either CSI volume cloning or VolumeSnapshots. Check with `oc get storageclass` and `oc get volumesnapshotclass`.]{{"{{"}}admonition note}}
+
+        ## Option A: Direct PVC clone (if source VM is stopped)
+
+        If your storage backend allows cloning in-use PVCs, or if you can stop the source VM temporarily:
+
+        ```
+        cat <<'EOF' | oc apply -f -
+        apiVersion: cdi.kubevirt.io/v1beta1
+        kind: DataVolume
+        metadata:
+          name: webserver-clone-2-disk
+          namespace: vm-cloning-demo
+          annotations:
+            cdi.kubevirt.io/storage.bind.immediate.requested: "true"
+        spec:
+          source:
+            pvc:
+              name: source-webserver
+              namespace: vm-cloning-demo
+          storage:
+            resources:
+              requests:
+                storage: 30Gi
+        EOF
+        ```{{"{{copy}}"}}
+
+        [The `cdi.kubevirt.io/storage.bind.immediate.requested` annotation is critical for storage classes that use WaitForFirstConsumer binding mode (like AWS EBS gp3-csi).]{{"{{"}}admonition important}}
+
+        ## Option B: Snapshot-based clone (works with running VMs)
+
+        For storage backends like LVMS/TopoLVM that cannot clone in-use PVCs, use snapshot-based cloning:
+
+        **Step 1:** Create a VolumeSnapshot of the source PVC:
+
+        ```
+        cat <<'EOF' | oc apply -f -
+        apiVersion: snapshot.storage.k8s.io/v1
+        kind: VolumeSnapshot
+        metadata:
+          name: source-webserver-snapshot
+          namespace: vm-cloning-demo
+        spec:
+          volumeSnapshotClassName: lvms-vg1
+          source:
+            persistentVolumeClaimName: source-webserver
+        EOF
+        ```{{"{{copy}}"}}
+
+        **Step 2:** Create a DataVolume from the snapshot:
+
+        ```
+        cat <<'EOF' | oc apply -f -
+        apiVersion: cdi.kubevirt.io/v1beta1
+        kind: DataVolume
+        metadata:
+          name: webserver-clone-2-disk
+          namespace: vm-cloning-demo
+          annotations:
+            cdi.kubevirt.io/storage.bind.immediate.requested: "true"
+        spec:
+          source:
+            snapshot:
+              name: source-webserver-snapshot
+              namespace: vm-cloning-demo
+          storage:
+            resources:
+              requests:
+                storage: 30Gi
+        EOF
+        ```{{"{{copy}}"}}
+
+        [Replace `lvms-vg1` with your VolumeSnapshotClass name. Find it with `oc get volumesnapshotclass`.]{{"{{"}}admonition tip}}
+
+        ## Monitor clone progress
+
+        Monitor the clone progress:
+
+        `oc get dv webserver-clone-2-disk -n vm-cloning-demo -w`{{"{{copy}}"}}
+
+        You will see phases like:
+
+        - **CloneFromSnapshotSourceInProgress** — Using storage snapshots (fast)
+
+        - **PrepClaimInProgress** — Preparing the PVC
+
+        - **RebindInProgress** — Binding the volume
+
+        - **Succeeded** — Clone completed successfully
+
+
+        Press **Ctrl+C** once the DataVolume shows `Succeeded`.
+
+        ## Create VM using the cloned disk
+
+        Once the DataVolume shows Succeeded, create a VM that uses the cloned disk:
+
+        ```
+        cat <<'EOF' | oc apply -f -
+        apiVersion: kubevirt.io/v1
+        kind: VirtualMachine
+        metadata:
+          name: webserver-clone-2
+          namespace: vm-cloning-demo
+        spec:
+          runStrategy: Manual
+          template:
+            metadata:
+              labels:
+                kubevirt.io/domain: webserver-clone-2
+            spec:
+              domain:
+                cpu:
+                  cores: 1
+                memory:
+                  guest: 2Gi
+                devices:
+                  disks:
+                    - name: rootdisk
+                      disk:
+                        bus: virtio
+                  interfaces:
+                    - name: default
+                      masquerade: {}
+              networks:
+                - name: default
+                  pod: {}
+              volumes:
+                - name: rootdisk
+                  persistentVolumeClaim:
+                    claimName: webserver-clone-2-disk
+        EOF
+        ```{{"{{copy}}"}}
+
+        ## Start the VM
+
+        Start the VM:
+
+        `virtctl start webserver-clone-2 -n vm-cloning-demo`{{"{{copy}}"}}
+      review:
+        instructions: |-
+          Did the DataVolume reach Succeeded state?
+
+          Is the webserver-clone-2 VM created and running?
+        failedTaskHelp: |-
+          Check DataVolume status for errors:
+
+          `oc describe dv webserver-clone-2-disk -n vm-cloning-demo`{{"{{copy}}"}}
+
+          **Common issues:**
+
+          - **Clone stuck with "CloneSourceInUse"**: Your storage backend cannot clone in-use PVCs. Use Option B (snapshot-based cloning) instead.
+
+          - **"No VolumeSnapshotClass"**: Your storage doesn't support snapshots. Stop the source VM with `virtctl stop source-webserver -n vm-cloning-demo`{{"{{copy}}"}} then use Option A.
+
+          - **Clone pending**: Check storage class supports cloning with `oc get storageclass -o yaml`{{"{{copy}}"}} and look for snapshot parameters.
+      summary:
+        success: "You cloned a VM using the CLI with a DataVolume."
+        failed: "Try the steps again."
+
+    - title: "Customize clones with cloud-init"
+      description: |-
+        Cloned VMs inherit all data from the source, including hostname and credentials. Use cloud-init to customize clones with new hostnames, passwords, and configurations.
+
+        ## Create a customized clone
+
+        Create a customized clone with a unique hostname and updated nginx welcome page. Since the source VM is still running, use snapshot-based cloning:
+
+        **Step 1:** Create the DataVolume from the snapshot:
+
+        ```
+        cat <<'EOF' | oc apply -f -
+        apiVersion: cdi.kubevirt.io/v1beta1
+        kind: DataVolume
+        metadata:
+          name: webserver-clone-3-custom-disk
+          namespace: vm-cloning-demo
+          annotations:
+            cdi.kubevirt.io/storage.bind.immediate.requested: "true"
+        spec:
+          source:
+            snapshot:
+              name: source-webserver-snapshot
+              namespace: vm-cloning-demo
+          storage:
+            resources:
+              requests:
+                storage: 30Gi
+        EOF
+        ```{{"{{copy}}"}}
+
+        **Step 2:** Wait for the DataVolume to complete:
+
+        `oc get dv webserver-clone-3-custom-disk -n vm-cloning-demo -w`{{"{{copy}}"}}
+
+        Press **Ctrl+C** once it shows `Succeeded`.
+
+        **Step 3:** Create the VM with cloud-init customization:
+
+        ```
+        cat <<'EOF' | oc apply -f -
+        apiVersion: kubevirt.io/v1
+        kind: VirtualMachine
+        metadata:
+          name: webserver-clone-3-custom
+          namespace: vm-cloning-demo
+        spec:
+          runStrategy: Always
+          template:
+            metadata:
+              labels:
+                kubevirt.io/domain: webserver-clone-3-custom
+            spec:
+              domain:
+                cpu:
+                  cores: 1
+                memory:
+                  guest: 2Gi
+                devices:
+                  disks:
+                    - name: rootdisk
+                      disk:
+                        bus: virtio
+                    - name: cloudinitdisk
+                      disk:
+                        bus: virtio
+                  interfaces:
+                    - name: default
+                      masquerade: {}
+              networks:
+                - name: default
+                  pod: {}
+              volumes:
+                - name: rootdisk
+                  persistentVolumeClaim:
+                    claimName: webserver-clone-3-custom-disk
+                - name: cloudinitdisk
+                  cloudInitNoCloud:
+                    userData: |
+                      #cloud-config
+                      hostname: webserver-custom
+                      fqdn: webserver-custom.vm-cloning-demo.svc
+                      manage_etc_hosts: true
+                      user: fedora
+                      password: custom123
+                      chpasswd:
+                        expire: false
+                      ssh_pwauth: true
+                      runcmd:
+                        - echo "Welcome to webserver-custom - A customized clone!" > /usr/share/nginx/html/index.html
+                        - systemctl restart nginx
+        EOF
+        ```{{"{{copy}}"}}
+
+        ## Cloud-init configuration reference
+
+        Key cloud-init configurations for clones:
+
+        - **hostname** — Sets a new hostname for the cloned VM
+        - **fqdn** — Sets the fully qualified domain name
+        - **manage_etc_hosts** — Updates /etc/hosts with the new hostname
+        - **password** — Sets the password for the default user
+        - **runcmd** — Executes commands on first boot to customize the VM
+
+        ## Verify the customization
+
+        Wait for the VM to be running, then verify the customization by accessing the VM console:
+
+        `virtctl console webserver-clone-3-custom -n vm-cloning-demo`{{"{{copy}}"}}
+
+        Check the hostname and nginx status inside the VM.
+      review:
+        instructions: |-
+          Did the customized clone VM start successfully?
+
+          Does the VM have a unique hostname (webserver-custom)?
+        failedTaskHelp: |-
+          Check the DataVolume status:
+
+          `oc get dv -n vm-cloning-demo`{{"{{copy}}"}}
+
+          Verify cloud-init ran successfully by checking cloud-init logs inside the VM.
+      summary:
+        success: "You customized a cloned VM with cloud-init."
+        failed: "Try the steps again."
+
+    - title: "Clean up resources"
+      description: |-
+        Remove all resources created during this Quick Start to free up storage and compute resources.
+
+        [This will permanently delete all VMs and associated disks. Ensure you have backups if needed.]{{"{{"}}admonition warning}}
+
+        ## Delete VMs and DataVolumes
+
+        Delete all VMs and DataVolumes:
+
+        `oc delete vm --all -n vm-cloning-demo`{{"{{copy}}"}}
+
+        `oc delete dv --all -n vm-cloning-demo`{{"{{copy}}"}}
+
+        ## Delete snapshots (if created)
+
+        If you used snapshot-based cloning (Option B), delete the snapshots:
+
+        `oc delete volumesnapshot --all -n vm-cloning-demo`{{"{{copy}}"}}
+
+        ## Delete the namespace
+
+        Delete the namespace:
+
+        `oc delete namespace vm-cloning-demo`{{"{{copy}}"}}
+
+        ## Verify cleanup
+
+        Verify cleanup:
+
+        `oc get namespace | grep vm-cloning`{{"{{copy}}"}}
+
+        The command should return no results.
+      review:
+        instructions: |-
+          Is the vm-cloning-demo namespace deleted?
+
+          `oc get namespace vm-cloning-demo`{{"{{copy}}"}}
+
+          It should return "not found".
+        failedTaskHelp: |-
+          Delete the namespace:
+
+          `oc delete namespace vm-cloning-demo`{{"{{copy}}"}}
+
+          Wait for the namespace to terminate. Check for any finalizers blocking deletion:
+
+          `oc get namespace vm-cloning-demo -o yaml`{{"{{copy}}"}}
+      summary:
+        success: "You cleaned up all resources. Well done!"
+        failed: "Try the steps again."
+  conclusion: >-
+    Congratulations! You learned how to **clone virtual machines** in OpenShift
+    Virtualization. Key takeaways:
+
+
+    - VM cloning creates copies of existing VMs with their entire disk contents,
+    configurations, and installed software
+
+
+    - The web console provides a simple point-and-click interface for cloning
+
+
+    - CLI-based cloning offers two methods: direct PVC cloning and snapshot-based
+    cloning, each suited for different storage backends
+
+
+    - Direct PVC cloning is fastest but may require stopping the source VM on some
+    storage backends (like LVMS/TopoLVM)
+
+
+    - Snapshot-based cloning works with running VMs and any storage backend that
+    supports VolumeSnapshots
+
+
+    - Cloud-init allows you to customize clones with unique hostnames,
+    passwords, and configurations
+
+
+    - Storage backends with CSI snapshot support enable efficient clone operations
+    using copy-on-write technology
+
+
+    - Understanding your storage class capabilities (CSI cloning, snapshots, volume
+    binding mode) is essential for choosing the right cloning method
+
+
+    - VM cloning accelerates development, testing, and deployment workflows by
+    enabling rapid creation of pre-configured environments
+  nextQuickStart:
+    - partner-labs-instancetype-preference
+{{- end }}
