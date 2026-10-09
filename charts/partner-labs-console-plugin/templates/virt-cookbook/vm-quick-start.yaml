@@ -1,0 +1,221 @@
+{{- if (index .Values.plugin.quickStarts "vm-quick-start").enabled }}
+apiVersion: console.openshift.io/v1
+kind: ConsoleQuickStart
+metadata:
+  name: vm-quick-start
+  labels:
+    {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
+spec:
+  displayName: "Quick Start: Your First VM in 5 Minutes"
+  description: "Create a small Fedora VM, check its status, open its console, and remove it when finished."
+  durationMinutes: 5
+  tags:
+    - virtualization
+    - kubevirt
+  prerequisites:
+    - "OpenShift Virtualization installed with capacity for a VM with 2 GiB of memory"
+    - "Web console access and permission to create and delete VirtualMachines in a test project"
+    - "An authenticated oc CLI; one-click Run requires the Web Terminal Operator, and virtctl is optional"
+    - "Cluster nodes can pull quay.io/containerdisks/fedora:latest"
+  introduction: |-
+    **OpenShift Virtualization** lets you run virtual machines alongside
+    containers. In this Quick Start, you will create `fedora-quickstart` in a
+    test project, verify that it starts, open its console, and remove it. The
+    VM uses an ephemeral Fedora container disk, so it needs no boot source or
+    StorageClass; guest changes are lost when it stops.
+
+    Tasks to complete: Select a test project; create the VM; verify that it is
+    running; open its console; clean up the VM.
+  tasks:
+    - title: "Select a project and check prerequisites"
+      description: |-
+        In the web console, if present, click the
+        [perspective switcher]{{"{{highlight qs-perspective-switcher}}"}} and
+        select **Virtualization**.
+
+        Create a test project in your CLI. Use a different unused name if
+        `firstvm` already exists:
+
+        `oc new-project firstvm`{{"{{execute}}"}}
+
+        This command also selects `firstvm` as your current project. Select it
+        explicitly in the CLI session you will use for the VM commands:
+
+        ```
+        oc project firstvm
+        ```{{"{{execute}}"}}
+
+        > **Tip:** If you already have a test project where you can create and
+        > delete VMs, select it instead. Replace `firstvm` in the command above
+        > with your project's name before running it. Do the same if you created
+        > a test project with a different name.
+
+        Confirm the selected project:
+
+        `oc project -q`{{"{{execute}}"}}
+
+        In the web console, select [VirtualMachines]{{"{{highlight qs-nav-virtualmachines}}"}}
+        from the navigation and select the same project. The Console project
+        selector does not change your CLI's current project.
+
+        Check that OpenShift Virtualization is available:
+
+        `oc get hyperconverged kubevirt-hyperconverged -n openshift-cnv`{{"{{execute}}"}}
+
+        Continue only if the HyperConverged resource is returned without an error.
+        Check whether the VM name is already in use in your selected project:
+
+        `oc get vm fedora-quickstart --ignore-not-found -o name`{{"{{execute}}"}}
+
+        No output and no error means the name is available. If a VM name appears,
+        stop and choose another test project; do not replace an existing VM.
+      review:
+        instructions: "Did the VM name check return no output and no error?"
+        failedTaskHelp: "Confirm the selected project and VM permissions. Ask your administrator to check OpenShift Virtualization if the HyperConverged resource is missing. Choose another test project if the VM exists."
+      summary:
+        success: "You created or selected a test project and confirmed that the VM name is free."
+        failed: "Resolve the project, virtualization, or name issue before creating a VM."
+
+    - title: "Create the Fedora VM"
+      description: |-
+        Run this command in the same CLI session. Use the Web Terminal Run action
+        if available, or copy it into your CLI. It creates the VM in your current
+        project with an ephemeral Fedora container disk and a temporary
+        `fedora` / `fedora` guest login. Do not use these credentials for a
+        production VM.
+
+        ```
+        oc create -f - <<'EOF'
+        apiVersion: kubevirt.io/v1
+        kind: VirtualMachine
+        metadata:
+          name: fedora-quickstart
+        spec:
+          runStrategy: Always
+          template:
+            metadata:
+              labels:
+                kubevirt.io/domain: fedora-quickstart
+            spec:
+              domain:
+                cpu:
+                  cores: 1
+                memory:
+                  guest: 2Gi
+                devices:
+                  disks:
+                    - name: containerdisk
+                      disk:
+                        bus: virtio
+                    - name: cloudinitdisk
+                      disk:
+                        bus: virtio
+                  interfaces:
+                    - name: default
+                      masquerade: {}
+              networks:
+                - name: default
+                  pod: {}
+              volumes:
+                - name: containerdisk
+                  containerDisk:
+                    image: quay.io/containerdisks/fedora:latest
+                - name: cloudinitdisk
+                  cloudInitNoCloud:
+                    userData: |-
+                      #cloud-config
+                      user: fedora
+                      password: fedora
+                      chpasswd:
+                        expire: false
+                      ssh_pwauth: true
+        EOF
+        ```{{"{{execute}}"}}
+
+        The `Always` run strategy starts the VM after creation. Image download
+        and startup may take several minutes.
+      review:
+        instructions: "Did oc create report virtualmachine.kubevirt.io/fedora-quickstart created?"
+        failedTaskHelp: "Check the selected project, VM permissions, and whether the name is already in use. Do not delete or replace a pre-existing VM."
+      summary:
+        success: "You created the Fedora VM."
+        failed: "Resolve the creation error before checking VM status."
+
+    - title: "Verify that the VM is running"
+      description: |-
+        Check the VirtualMachine and its running VirtualMachineInstance:
+
+        `oc get vm fedora-quickstart`{{"{{execute}}"}}
+
+        `oc get vmi fedora-quickstart`{{"{{execute}}"}}
+
+        Wait for the VMI phase to become **Running**. If startup stalls,
+        inspect the VM events and its launcher pod:
+
+        `oc describe vm fedora-quickstart`{{"{{execute}}"}}
+
+        `oc get pods -l kubevirt.io/domain=fedora-quickstart -o wide`{{"{{execute}}"}}
+
+        A Pending launcher pod can indicate insufficient node capacity. The
+        container disk does not create a PVC.
+      review:
+        instructions: "Does the VMI report Running in the selected project?"
+        failedTaskHelp: "Read the VM events and launcher pod status. Check node capacity, image pull access, and project quota before continuing."
+      summary:
+        success: "The Fedora VMI is running."
+        failed: "Resolve the startup issue before opening the guest console."
+
+    - title: "Open the VM console"
+      description: |-
+        In the web console, select
+        [VirtualMachines]{{"{{highlight qs-nav-virtualmachines}}"}} from the
+        **Virtualization** navigation, or
+        [open the VirtualMachines list](/k8s/all-namespaces/kubevirt.io~v1~VirtualMachine).
+        Select your project and open `fedora-quickstart`. Click the **Console**
+        tab, then select the serial console.
+
+        If you have the virtctl CLI, you can connect from the same terminal:
+
+        `virtctl console fedora-quickstart`{{"{{execute}}"}}
+
+        **Press Enter** after the serial console opens to display the login
+        prompt.
+
+        At `login:`, enter `fedora` and press **Enter**.
+
+        At `Password:`, enter **`fedora`** and press **Enter**.
+
+        Press **Ctrl+]** to leave the serial console. If serial login is
+        unavailable, try the VM's VNC console in the web console.
+      review:
+        instructions: "Did the guest console open for fedora-quickstart?"
+        failedTaskHelp: "Confirm the VMI is Running and allow cloud-init to finish. Try the VNC console if serial login is unavailable."
+      summary:
+        success: "You opened the Fedora guest console."
+        failed: "Check VM status and reconnect through serial or VNC."
+
+    - title: "Clean up the demo VM"
+      description: |-
+        In the same project, confirm the name and delete only the VM you
+        created for this walkthrough:
+
+        `oc get vm fedora-quickstart`{{"{{execute}}"}}
+
+        `oc delete vm fedora-quickstart`{{"{{execute}}"}}
+
+        Verify removal. No output and no error means the VM is gone:
+
+        `oc get vm fedora-quickstart --ignore-not-found -o name`{{"{{execute}}"}}
+
+        The container disk is ephemeral; deleting the VM discards its guest data.
+      review:
+        instructions: "Is fedora-quickstart gone from your selected project?"
+        failedTaskHelp: "Check your current project and VM status. Do not delete a VM that you did not create for this walkthrough."
+      summary:
+        success: "You removed the demo VM."
+        failed: "Confirm the project and remove the demo VM when finished."
+  conclusion: |-
+    You created a Fedora VM with an ephemeral container disk, verified its VMI,
+    connected to its console, and cleaned up the resource.
+  nextQuickStart: []
+{{- end }}
