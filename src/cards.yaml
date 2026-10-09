@@ -43,6 +43,12 @@
   body: Follow a guided walkthrough to inspect, customize, and test reusable VM templates with the CLI.
   quickStartId: vm-templates
 
+- id: vm-quick-start
+  kind: quickstart
+  title: 'Quick Start: Your First VM in 5 Minutes'
+  body: Create a Fedora VM, check that it is running, open its console, and clean it up in your selected project.
+  quickStartId: vm-quick-start
+
 - id: pipeline
   kind: pipeline
   title: Tekton Pipeline

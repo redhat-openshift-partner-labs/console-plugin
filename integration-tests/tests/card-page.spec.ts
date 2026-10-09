@@ -116,6 +116,17 @@ test.describe('Console plugin cards', () => {
     ).toBeVisible();
   });
 
+  test('opens the VM quick start', async ({ page }) => {
+    await page.goto('/partner-labs-demos');
+    await page.getByTestId('card-action-vm-quick-start').click();
+    await expect(
+      page.getByRole('heading', { name: 'Quick Start: Your First VM in 5 Minutes', exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText('Select a project and check prerequisites', { exact: true }),
+    ).toBeVisible();
+  });
+
   test('opens the OpenShift Virtualization installation quick start', async ({ page }) => {
     await page.goto('/partner-labs-demos');
     await page.getByTestId('card-action-install-configure-ocpv-operator').click();

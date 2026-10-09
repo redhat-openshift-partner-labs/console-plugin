@@ -71,10 +71,11 @@ describe('DemosPage', () => {
         <DemosPage />
       </MemoryRouter>,
     );
-    expect(screen.getAllByTestId(/^card-(?!action)/)).toHaveLength(9);
+    expect(screen.getAllByTestId(/^card-(?!action)/)).toHaveLength(10);
     expect(screen.getByText('Custom Page')).toBeInTheDocument();
     expect(screen.getByText('How-to Use Demos')).toBeInTheDocument();
     expect(screen.getByText('Creating Virtual Machines')).toBeInTheDocument();
+    expect(screen.getByText('Quick Start: Your First VM in 5 Minutes')).toBeInTheDocument();
     expect(screen.getByText('Custom VM Templates')).toBeInTheDocument();
     expect(screen.getByText('VM Instancetypes & Preferences')).toBeInTheDocument();
     expect(screen.getByText('Install and configure OpenShift Virtualization')).toBeInTheDocument();
@@ -97,6 +98,7 @@ describe('DemosPage', () => {
   });
 
   it.each([
+    ['vm-quick-start', 'vm-quick-start'],
     ['vm-instancetypes-and-preferences', 'vm-instancetypes-and-preferences'],
     ['install-configure-ocpv-operator', 'install-configure-ocpv-operator'],
     ['create-vm-web-console', 'create-vm-web-console'],
@@ -191,7 +193,7 @@ describe('DemosPage', () => {
     fireEvent.change(search, { target: { value: 'no matching demo' } });
     expect(screen.getByText('No demos match your filters')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('clear-filters'));
-    expect(screen.getAllByTestId(/^card-(?!action)/)).toHaveLength(9);
+    expect(screen.getAllByTestId(/^card-(?!action)/)).toHaveLength(10);
   });
 
   it('filters by kind and displays each action in the footer', () => {
