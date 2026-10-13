@@ -1,3 +1,4 @@
+import * as cloningVmsData from './content/cloning-vms.yaml';
 import * as createVmData from './content/create-vm.yaml';
 import * as howToUseDemosData from './content/how-to-use-demos.yaml';
 import * as vmTemplatesData from './content/vm-templates.yaml';
@@ -16,6 +17,7 @@ function loadSections(data: unknown, id: string): CookbookSection[] {
 }
 
 export const cookbookContent: Record<string, CookbookSection[]> = {
+  'cloning-vms': loadSections(cloningVmsData, 'cloning-vms'),
   'how-to-use-demos': loadSections(howToUseDemosData, 'how-to-use-demos'),
   'create-vm': loadSections(createVmData, 'create-vm'),
   'vm-templates-cookbook': loadSections(vmTemplatesData, 'vm-templates-cookbook'),

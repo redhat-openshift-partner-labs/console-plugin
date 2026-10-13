@@ -43,6 +43,12 @@
   body: Follow a guided walkthrough to inspect, customize, and test reusable VM templates with the CLI.
   quickStartId: vm-templates
 
+- id: cloning-vms
+  kind: quickstart
+  title: Cloning Virtual Machines
+  body: Start a guided walkthrough for cloning virtual machines in OpenShift Virtualization.
+  quickStartId: partner-labs-cloning-vms
+
 - id: pipeline
   kind: pipeline
   title: Tekton Pipeline

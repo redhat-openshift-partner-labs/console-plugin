@@ -43,6 +43,8 @@ plugin:
       enabled: true
     vm-instancetypes-and-preferences:
       enabled: true
+    cloningVMs:
+      enabled: true
   jobs:
     patchConsoles:
       enabled: true
