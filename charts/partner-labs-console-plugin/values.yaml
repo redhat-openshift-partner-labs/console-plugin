@@ -35,13 +35,15 @@ plugin:
     annotations: {}
     name: ""
   quickStarts:
-    install-configure-ocpv-operator:
-      enabled: true
-    vm-templates:
-      enabled: true
     create-vm-web-console:
       enabled: true
+    install-configure-ocpv-operator:
+      enabled: true
     vm-instancetypes-and-preferences:
+      enabled: true
+    vm-lifecycle-states:
+      enabled: true
+    vm-templates:
       enabled: true
   jobs:
     patchConsoles:

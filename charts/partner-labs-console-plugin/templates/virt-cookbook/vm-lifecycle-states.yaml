@@ -1,0 +1,303 @@
+{{- if (index .Values.plugin.quickStarts "vm-lifecycle-states").enabled }}
+apiVersion: console.openshift.io/v1
+kind: ConsoleQuickStart
+metadata:
+  name: vm-lifecycle-states
+  labels:
+    {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
+spec:
+  displayName: "Understanding VM lifecycle states"
+  description: "Manage virtual machine lifecycle by starting, monitoring, pausing, and stopping VMs using virtctl and the web console."
+  durationMinutes: 25
+  tags:
+    - virtualization
+    - kubevirt
+  prerequisites:
+    - "OpenShift 4.19+ with OpenShift Virtualization installed"
+    - "A shell with authenticated oc and virtctl CLI tools"
+    - "Permission to create and manage VMs in a project"
+    - "A stopped VM available for practice, or the ability to create one"
+  introduction: |-
+    OpenShift Virtualization uses two primary resources to manage virtual machines:
+    **VirtualMachine (VM)** is the persistent definition that exists whether running
+    or stopped. **VirtualMachineInstance (VMI)** represents an actual running instance,
+    created when a VM starts and deleted when it stops.
+
+    Understanding the relationship between these resources and the lifecycle states a
+    VM transitions through is essential for effective VM management, troubleshooting,
+    and automation.
+
+    In this walkthrough, start a stopped VM, monitor its state transitions, pause and
+    resume execution, and perform a graceful shutdown. Use the same shell and project
+    throughout.
+
+    If you do not have a stopped VM available, create one using the **Create a VM from
+    the web console** QuickStart first, then stop it before beginning this tutorial.
+  tasks:
+    - title: "Understand VM and VMI resources"
+      description: |-
+        1. Choose a project with at least one stopped VM for this tutorial. If the
+           VM name used below does not exist in your environment, replace `fedora-app-vm`
+           and the project name `my-vms` with your actual VM and project name in every
+           command throughout this QuickStart.
+
+        `oc get vm -n my-vms`{{execute}}
+
+        Check the **STATUS** column. A stopped VM shows **Stopped** with **READY** as **False**.
+
+        2. Verify that no VirtualMachineInstance exists for the stopped VM:
+
+        `oc get vmi fedora-app-vm -n my-vms`{{execute}}
+
+        You should see a **NotFound** error. The VMI only exists when the VM is running.
+
+        3. Examine the VirtualMachine resource details:
+
+        `oc describe vm fedora-app-vm -n my-vms`{{execute}}
+
+        Review the **Status.Printable Status** and **Status.Conditions** sections.
+        The **Ready** condition should be **False** for a stopped VM. The VM resource
+        contains the persistent machine definition including CPU, memory, disks, and
+        network configuration.
+
+        The VirtualMachine resource is the template that defines what the VM should
+        be. The VirtualMachineInstance is the actual running instance created from
+        that template when you start the VM.
+      review:
+        instructions: "Did you find a stopped VM with no VMI, and understand the difference between VM and VMI resources?"
+        failedTaskHelp: "Ensure you have access to a project with a stopped VM. If no VM exists, create and stop one first using the web console or another QuickStart. The VM must show Status: Stopped before continuing."
+      summary:
+        success: "You identified the persistent VirtualMachine and confirmed no running VMI exists for a stopped VM."
+        failed: "Verify you have a stopped VM available before proceeding."
+
+    - title: "Start the VM and observe state transitions"
+      description: |-
+        When you start a VM, it transitions through several states: **Pending**
+        (waiting for prerequisites), **Scheduling** (finding a node), **Starting**
+        (booting), and finally **Running**.
+
+        1. Start the VM using virtctl:
+
+        `virtctl start fedora-app-vm -n my-vms`{{execute}}
+
+        2. Immediately check the VM status to catch early state transitions:
+
+        `oc get vm fedora-app-vm -n my-vms`{{execute}}
+
+        You may see **Provisioning**, **Starting**, or **Running** depending on timing
+        and storage population behavior.
+
+        3. Watch the VM until it reaches Running status, then press **Ctrl+C**:
+
+        `oc get vm fedora-app-vm -n my-vms -w`{{execute}}
+
+        Wait for **STATUS** to show **Running** and **READY** to be **True**.
+
+        4. Verify the VirtualMachineInstance was created:
+
+        `oc get vmi fedora-app-vm -n my-vms`{{execute}}
+
+        The VMI now exists and shows **PHASE: Running**. It contains runtime
+        information including the IP address, assigned node, and current phase.
+
+        5. Get detailed VMI information:
+
+        `oc describe vmi fedora-app-vm -n my-vms`{{execute}}
+
+        Check **Status.Phase**, **Status.Node Name** (which node is hosting the VM),
+        and **Status.Interfaces** (network information including IP address).
+      review:
+        instructions: "Is the VM Running with a corresponding VMI showing detailed runtime information?"
+        failedTaskHelp: "Check oc describe vm fedora-app-vm -n my-vms for errors. Inspect DataVolume and PVC status with oc get dv,pvc -n my-vms. Common issues include storage binding delays, insufficient quota, or scheduling constraints. Wait for any disk cloning to complete."
+      summary:
+        success: "You started the VM and observed its transition to Running state with an active VMI."
+        failed: "Resolve startup errors before continuing with lifecycle operations."
+
+    - title: "Monitor VM status with conditions and events"
+      description: |-
+        VMs report conditions that indicate their state. Events provide detailed
+        information about what operations are happening.
+
+        1. Check VM conditions in JSON format:
+
+        `oc get vm fedora-app-vm -n my-vms -o jsonpath='{.status.conditions}' | jq`{{execute}}
+
+        Review the **Ready**, **DataVolumesReady**, and **LiveMigratable** conditions.
+        A running VM should have **Ready: True**. The **LiveMigratable** condition
+        depends on whether the VM uses shared storage.
+
+        2. View recent events for the VM:
+
+        `oc get events -n my-vms --field-selector involvedObject.name=fedora-app-vm`{{execute}}
+
+        Look for events like **SuccessfulCreate** (VMI created), **Started** (VM booted),
+        and storage-related events. Events show the timeline of operations and are
+        valuable for troubleshooting.
+
+        3. Check the current VMI phase and ready status:
+
+        `oc get vmi fedora-app-vm -n my-vms -o jsonpath='{.status.phase}'`{{execute}}
+
+        `oc get vmi fedora-app-vm -n my-vms -o jsonpath='{.status.conditions}' | jq`{{execute}}
+
+        The VMI phase should be **Running** and the VMI should have a **Ready: True** condition.
+
+        Understanding conditions and events helps you diagnose issues and track VM
+        lifecycle operations. Conditions represent the current state, while events
+        provide the historical timeline of changes.
+      review:
+        instructions: "Did you view VM and VMI conditions and understand how to use events for monitoring?"
+        failedTaskHelp: "If jq is not available, omit | jq and review the raw JSON output. Events may scroll quickly; use --sort-by='.lastTimestamp' to order them chronologically. Ensure the VM is Running before checking its conditions."
+      summary:
+        success: "You examined VM conditions and events to understand monitoring and troubleshooting tools."
+        failed: "Review the VM and VMI status to ensure it is running properly."
+
+    - title: "Pause and resume VM execution"
+      description: |-
+        Pausing freezes VM execution while keeping its state in memory. This is
+        useful for temporarily freeing CPU resources, taking snapshots, or debugging.
+        Paused VMs still consume memory on the node.
+
+        1. Pause the running VM:
+
+        `virtctl pause vm fedora-app-vm -n my-vms`{{execute}}
+
+        2. Check the VM status immediately:
+
+        `oc get vm fedora-app-vm -n my-vms`{{execute}}
+
+        The **STATUS** should now show **Paused** and **READY** will be **False**.
+
+        3. Verify the VMI still exists but is paused:
+
+        `oc get vmi fedora-app-vm -n my-vms`{{execute}}
+
+        The VMI remains because the VM is still allocated to a node, but CPU
+        execution is suspended. Unlike stopping, pausing keeps the entire VM state
+        in memory and can resume instantly.
+
+        4. Resume the VM:
+
+        `virtctl unpause vm fedora-app-vm -n my-vms`{{execute}}
+
+        5. Confirm the VM returned to Running:
+
+        `oc get vm fedora-app-vm -n my-vms`{{execute}}
+
+        The VM should now show **Running** again. Unpause is nearly instantaneous
+        because the VM state was preserved in memory.
+
+        Pause is different from stop: pausing preserves the exact execution state
+        in memory and allows instant resumption, while stopping shuts down the guest
+        OS and deletes the VMI.
+      review:
+        instructions: "Did you successfully pause and unpause the VM, and understand the difference between paused and stopped states?"
+        failedTaskHelp: "Ensure the VM was Running before attempting to pause. Check oc describe vm fedora-app-vm -n my-vms if pause fails. The VMI must exist during the paused state; only the CPU execution is suspended."
+      summary:
+        success: "You paused and resumed VM execution, observing that the VMI persists in the paused state."
+        failed: "Verify the VM can be paused and unpaused successfully."
+
+    - title: "Stop the VM gracefully"
+      description: |-
+        Stopping a VM performs a graceful shutdown of the guest OS and deletes the
+        VirtualMachineInstance. The VirtualMachine resource persists so you can start
+        it again later.
+
+        1. Stop the VM using virtctl:
+
+        `virtctl stop fedora-app-vm -n my-vms`{{execute}}
+
+        This initiates a graceful shutdown inside the guest OS, similar to running
+        `shutdown -h now` from within the VM.
+
+        2. Watch the VM status during shutdown, then press **Ctrl+C** when it shows Stopped:
+
+        `oc get vm fedora-app-vm -n my-vms -w`{{execute}}
+
+        The **STATUS** will transition through **Stopping** and then **Stopped**.
+        **READY** will become **False**.
+
+        3. Verify the VMI was deleted:
+
+        `oc get vmi fedora-app-vm -n my-vms`{{execute}}
+
+        You should see a **NotFound** error. The VMI is deleted when the VM stops,
+        just as it was when you began this QuickStart.
+
+        4. Confirm the VirtualMachine resource still exists:
+
+        `oc get vm fedora-app-vm -n my-vms`{{execute}}
+
+        The VM resource persists with **STATUS: Stopped**. You can start it again
+        at any time using `virtctl start`.
+
+        Graceful stop allows the guest OS to shut down cleanly. If a VM becomes
+        unresponsive, you can force stop with `virtctl stop --force --grace-period=0`,
+        but this is equivalent to pulling the power cord and should only be used
+        when necessary.
+      review:
+        instructions: "Is the VM stopped with no VMI, while the VM resource persists?"
+        failedTaskHelp: "If the VM does not stop after a reasonable time, check guest OS responsiveness. Force stop only if graceful shutdown fails. Verify with oc describe vm fedora-app-vm -n my-vms that no errors are blocking the shutdown."
+      summary:
+        success: "You gracefully stopped the VM, deleting the VMI while preserving the VirtualMachine definition."
+        failed: "Check the VM shutdown process and resolve any blocking issues."
+
+    - title: "Understand run strategies"
+      description: |-
+        Run strategies control how a VM behaves automatically throughout its lifecycle.
+        They are set in the VM specification and determine whether the VM starts
+        automatically, restarts after stopping, or stays stopped.
+
+        1. Check the current run strategy for your VM:
+
+        `oc get vm fedora-app-vm -n my-vms -o jsonpath='{.spec.runStrategy}'`{{execute}}
+
+        Common strategies are:
+
+        - **Manual**: VM only starts or stops when explicitly requested (default for many templates)
+        - **Always**: VM starts automatically and restarts if it stops for any reason
+        - **RerunOnFailure**: VM restarts only on failure, respects guest-initiated shutdown
+        - **Halted**: VM stays stopped, start commands are ignored
+
+        2. View the complete VM specification to see the run strategy in context:
+
+        `oc get vm fedora-app-vm -n my-vms -o yaml | grep -A 2 "runStrategy"`{{execute}}
+
+        The run strategy determines whether `virtctl stop` keeps the VM stopped or
+        if it restarts automatically. With **Always**, stopping the VM will cause it
+        to restart. To keep it stopped, change the run strategy to **Halted** or **Manual**.
+
+        Run strategies enable automation: use **Always** for production workloads that
+        must stay running, **RerunOnFailure** for services that should recover from
+        crashes, and **Manual** for development VMs you control explicitly.
+
+        If you want to practice changing run strategies, edit the VM with
+        `oc edit vm fedora-app-vm -n my-vms` and modify the `spec.runStrategy` field.
+        Remember that changing from **Manual** to **Always** will immediately start a
+        stopped VM.
+      review:
+        instructions: "Do you understand how run strategies control automatic VM behavior and the difference between Manual, Always, RerunOnFailure, and Halted?"
+        failedTaskHelp: "The runStrategy field may be empty if the deprecated running field is used instead. Check the VM YAML for either runStrategy or running. Modern VMs should use runStrategy. Review the VM specification to understand the current configuration."
+      summary:
+        success: "You identified the VM's run strategy and understand how it controls automatic lifecycle behavior."
+        failed: "Review the run strategy field and its impact on VM startup and restart behavior."
+  conclusion: |-
+    You have learned the relationship between VirtualMachine and VirtualMachineInstance
+    resources, observed VM state transitions, monitored status using conditions and
+    events, paused and resumed execution, and performed graceful shutdown.
+
+    Key concepts:
+
+    - **VirtualMachine (VM)** is the persistent definition; **VirtualMachineInstance (VMI)**
+      is the running instance created when the VM starts
+    - VMs transition through states: Stopped, Pending, Scheduling, Starting, Running,
+      Paused, Stopping
+    - Conditions and events provide monitoring and troubleshooting information
+    - Pause suspends CPU execution while preserving state in memory; stop shuts down
+      the guest and deletes the VMI
+    - Run strategies control automatic VM startup and restart behavior
+
+    Continue with **Custom VM Templates** to learn how to define reusable VM configurations,
+    or explore the **VM Templates** cookbook card for advanced template customization.
+  nextQuickStart: []
+{{- end }}

@@ -81,6 +81,7 @@ describe('DemosPage', () => {
     expect(screen.getByText('Install and configure OpenShift Virtualization')).toBeInTheDocument();
     expect(screen.getByText('Create a VM from the web console')).toBeInTheDocument();
     expect(screen.getByText('Create custom VM templates')).toBeInTheDocument();
+    expect(screen.getByText('Understanding VM lifecycle states')).toBeInTheDocument();
     expect(screen.getByText('Tekton Pipeline')).toBeInTheDocument();
   });
 

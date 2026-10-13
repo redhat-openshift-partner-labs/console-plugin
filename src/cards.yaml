@@ -43,6 +43,12 @@
   body: Follow a guided walkthrough to inspect, customize, and test reusable VM templates with the CLI.
   quickStartId: vm-templates
 
+- id: vm-lifecycle-states
+  kind: quickstart
+  title: Understanding VM lifecycle states
+  body: Manage virtual machine lifecycle by starting, monitoring, pausing, and stopping VMs.
+  quickStartId: vm-lifecycle-states
+
 - id: pipeline
   kind: pipeline
   title: Tekton Pipeline
