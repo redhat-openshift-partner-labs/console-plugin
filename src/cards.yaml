@@ -43,6 +43,12 @@
   body: Follow a guided walkthrough to inspect, customize, and test reusable VM templates with the CLI.
   quickStartId: vm-templates
 
+- id: windows-golden-images
+  kind: quickstart
+  title: Create Windows golden images
+  body: Build a Windows Server 2025 golden image with Tekton, clone it with sysprep settings, and verify the guest.
+  quickStartId: windows-golden-images
+
 - id: pipeline
   kind: pipeline
   title: Tekton Pipeline

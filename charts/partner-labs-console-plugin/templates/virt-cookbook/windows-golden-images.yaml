@@ -1,0 +1,690 @@
+# Answer files and VM examples adapted from the OpenShift Virtualization Cookbook:
+# https://github.com/RedHatQuickCourses/ocp-virt-cookbook/blob/dfa9150f9c405da76364c1f3b14abfef738cb0c7/modules/vm-lifecycle/pages/windows-golden-images.adoc
+#
+# MIT License
+# Copyright (c) 2025 OpenShift Virtualization Cookbook
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+{{- if (index .Values.plugin.quickStarts "windows-golden-images").enabled }}
+apiVersion: console.openshift.io/v1
+kind: ConsoleQuickStart
+metadata:
+  name: windows-golden-images
+  labels:
+    {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
+spec:
+  displayName: "Create Windows golden images"
+  description: "Build a Windows Server 2025 golden image with Tekton, clone it with sysprep settings, and verify the guest."
+  durationMinutes: 90
+  tags:
+    - virtualization
+    - windows
+    - pipelines
+  prerequisites:
+    - "OpenShift with OpenShift Virtualization and OpenShift Pipelines installed, and the Tekton hub resolver enabled"
+    - "An existing AWS OpenShift cluster with virtualization-capable amd64 workers, the u1.large instancetype, and the windows.2k25.virtio preference"
+    - "A default StorageClass suitable for VM disks and filesystem PVCs, with capacity for a 60 GiB golden disk, a 60 GiB clone, and temporary ISO storage; the ISO task also needs up to 24 GiB of node ephemeral storage"
+    - "Permission to create a dedicated project and its resources; an administrator must grant the builder service account project access and the anyuid SCC"
+    - "An authenticated oc CLI, Bash, curl, Python 3, and a text editor; Run controls require Web Terminal"
+    - "An approved English (United States), x64 Windows Server 2025 ISO URL and access to the applicable Microsoft license terms"
+    - "Cluster access to the ISO URL, Artifact Hub, GitHub, and the pipeline task images, including authenticated pulls from registry.redhat.io"
+  introduction: |-
+    Build one reusable Windows Server 2025 disk, then clone it into a VM with
+    its own hostname and Administrator password. Windows Setup uses
+    `autounattend.xml` during installation; sysprep generalizes the disk, and
+    a separate `unattend.xml` configures each clone on first boot.
+
+    The `windows-efi-installer` pipeline downloads and modifies the ISO,
+    installs Windows and VirtIO drivers, waits for sysprep shutdown, and
+    publishes a DataSource. Allow 30-60 minutes for that build, plus setup
+    and clone verification. Actual time depends on network and storage.
+
+    Use one authenticated terminal and working directory throughout. Commands
+    target `windows-golden-images`; this project is separate from the Console
+    project selector. This walkthrough uses existing virtualization capacity,
+    without adding AWS infrastructure, external RDP exposure, or extra hardware.
+  tasks:
+    - title: "Prepare a dedicated project"
+      description: |-
+        Confirm the required APIs, cluster profiles, and default storage exist:
+
+        ```
+        oc get crd virtualmachines.kubevirt.io pipelineruns.tekton.dev datavolumes.cdi.kubevirt.io
+        oc get virtualmachineclusterinstancetype u1.large
+        oc get virtualmachineclusterpreference windows.2k25.virtio
+        oc get storageclass
+        ```{{"{{execute}}"}}
+
+        Stop if a prerequisite is missing. Have an administrator prepare the
+        cluster before continuing. For AWS, use workers already configured to
+        run OpenShift Virtualization; ordinary worker capacity alone is not enough.
+
+        Create a new tutorial project:
+
+        `oc new-project windows-golden-images`{{"{{execute}}"}}
+
+        If it already exists, stop and choose an unused name. Replace the
+        project name in every command, manifest, and script below; do not reuse
+        or delete an unrelated project.
+
+        Create a dedicated builder service account:
+
+        `oc create serviceaccount windows-image-builder -n windows-golden-images`{{"{{execute}}"}}
+
+        Ask an administrator to run these grants. The edit role lets the
+        pipeline manage resources only in this tutorial project. The anyuid
+        SCC permits the ISO modification task to use UID and group 107:
+
+        ```
+        oc adm policy add-role-to-user edit -z windows-image-builder -n windows-golden-images
+        oc adm policy add-scc-to-user anyuid -z windows-image-builder -n windows-golden-images
+        ```{{"{{execute}}"}}
+
+        The builder account and VM launcher must also be able to pull the
+        Red Hat task and VirtIO images. Use your cluster's approved registry
+        credentials if its pull configuration does not already provide access.
+      review:
+        instructions: "Do the prerequisite checks succeed, and does the new project have a builder account with the required grants?"
+        failedTaskHelp: "Ask an administrator to resolve missing APIs, worker capacity, storage, hub resolution, registry access, or service-account permissions before creating a PipelineRun."
+      summary:
+        success: "A dedicated project and builder account are ready."
+        failed: "Resolve the prerequisites and permissions before continuing."
+
+    - title: "Prepare Windows installation media and answer files"
+      description: |-
+        Obtain an English (United States), x64 Windows Server 2025 ISO URL from
+        the [Microsoft Evaluation Center](https://www.microsoft.com/en-us/evalcenter/evaluate-windows-server-2025)
+        or an approved internal mirror. Use a direct download URL reachable
+        from the cluster, not the registration page. Refresh an expired link
+        if downloads fail. Review the media's license and evaluation limits.
+
+        Copy the following into `configmap-windows2k25-autounattend.yaml`.
+        It loads the `2k25` VirtIO drivers, partitions the disk, selects the
+        Server 2025 Datacenter image, enters Audit mode, installs the guest
+        agent, and generalizes the installation before shutdown.
+
+        **Review the applicable Microsoft terms yourself. Only if you accept
+        them, change `<AcceptEula>false</AcceptEula>` to
+        `<AcceptEula>true</AcceptEula>` before creating this ConfigMap.**
+        Confirm the image description and driver paths match your ISO.
+
+        ```yaml
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: windows2k25-autounattend
+          namespace: windows-golden-images
+        data:
+          autounattend.xml: |
+            <?xml version="1.0" encoding="utf-8"?>
+            <unattend xmlns="urn:schemas-microsoft-com:unattend">
+              <settings pass="windowsPE">
+                <component name="Microsoft-Windows-PnpCustomizationsWinPE" processorArchitecture="amd64"
+                           publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS"
+                           xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+                  <DriverPaths>
+                    <PathAndCredentials wcm:action="add" wcm:keyValue="1">
+                      <Path>E:\viostor\2k25\amd64</Path>
+                    </PathAndCredentials>
+                    <PathAndCredentials wcm:action="add" wcm:keyValue="2">
+                      <Path>E:\NetKVM\2k25\amd64</Path>
+                    </PathAndCredentials>
+                  </DriverPaths>
+                </component>
+                <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="amd64"
+                           publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+                  <SetupUILanguage>
+                    <UILanguage>en-US</UILanguage>
+                  </SetupUILanguage>
+                  <InputLocale>en-US</InputLocale>
+                  <SystemLocale>en-US</SystemLocale>
+                  <UILanguage>en-US</UILanguage>
+                  <UserLocale>en-US</UserLocale>
+                </component>
+                <component name="Microsoft-Windows-Setup" processorArchitecture="amd64"
+                           publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS"
+                           xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+                  <UserData>
+                    <AcceptEula>false</AcceptEula>
+                  </UserData>
+                  <DiskConfiguration>
+                    <Disk wcm:action="add">
+                      <DiskID>0</DiskID>
+                      <WillWipeDisk>true</WillWipeDisk>
+                      <CreatePartitions>
+                        <CreatePartition wcm:action="add">
+                          <Order>1</Order>
+                          <Type>EFI</Type>
+                          <Size>100</Size>
+                        </CreatePartition>
+                        <CreatePartition wcm:action="add">
+                          <Order>2</Order>
+                          <Type>MSR</Type>
+                          <Size>16</Size>
+                        </CreatePartition>
+                        <CreatePartition wcm:action="add">
+                          <Order>3</Order>
+                          <Type>Primary</Type>
+                          <Extend>true</Extend>
+                        </CreatePartition>
+                      </CreatePartitions>
+                      <ModifyPartitions>
+                        <ModifyPartition wcm:action="add">
+                          <Order>1</Order>
+                          <PartitionID>1</PartitionID>
+                          <Format>FAT32</Format>
+                          <Label>System</Label>
+                        </ModifyPartition>
+                        <ModifyPartition wcm:action="add">
+                          <Order>2</Order>
+                          <PartitionID>2</PartitionID>
+                        </ModifyPartition>
+                        <ModifyPartition wcm:action="add">
+                          <Order>3</Order>
+                          <PartitionID>3</PartitionID>
+                          <Format>NTFS</Format>
+                          <Label>Windows</Label>
+                          <Letter>C</Letter>
+                        </ModifyPartition>
+                      </ModifyPartitions>
+                    </Disk>
+                  </DiskConfiguration>
+                  <ImageInstall>
+                    <OSImage>
+                      <InstallFrom>
+                        <MetaData wcm:action="add">
+                          <Key>/Image/Description</Key>
+                          <Value>Windows Server 2025 SERVERDATACENTER</Value>
+                        </MetaData>
+                      </InstallFrom>
+                      <InstallTo>
+                        <DiskID>0</DiskID>
+                        <PartitionID>3</PartitionID>
+                      </InstallTo>
+                    </OSImage>
+                  </ImageInstall>
+                </component>
+              </settings>
+              <settings pass="specialize">
+                <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64"
+                           publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+                  <InputLocale>en-US</InputLocale>
+                  <SystemLocale>en-US</SystemLocale>
+                  <UILanguage>en-US</UILanguage>
+                  <UserLocale>en-US</UserLocale>
+                </component>
+              </settings>
+              <settings pass="oobeSystem">
+                <component name="Microsoft-Windows-Deployment" processorArchitecture="amd64"
+                           publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+                  <Reseal>
+                    <Mode>Audit</Mode>
+                  </Reseal>
+                </component>
+              </settings>
+              <settings pass="auditUser">
+                <component name="Microsoft-Windows-Deployment" processorArchitecture="amd64"
+                           publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS"
+                           xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+                  <RunSynchronous>
+                    <RunSynchronousCommand wcm:action="add">
+                      <Order>1</Order>
+                      <Path>PowerShell -ExecutionPolicy Bypass -NoProfile F:\post-install.ps1</Path>
+                      <Description>Run post-install script</Description>
+                    </RunSynchronousCommand>
+                  </RunSynchronous>
+                  <Generalize>
+                    <ForceShutdownNow>true</ForceShutdownNow>
+                    <Mode>OOBE</Mode>
+                  </Generalize>
+                </component>
+              </settings>
+            </unattend>
+          post-install.ps1: |
+            # Install VirtIO guest drivers
+            Start-Process msiexec -Wait -ArgumentList "/i E:\virtio-win-gt-x64.msi /qn /passive /norestart"
+
+            # Install QEMU guest agent
+            Start-Process msiexec -Wait -ArgumentList "/i E:\guest-agent\qemu-ga-x86_64.msi /qn /passive /norestart"
+
+            # Rename cached unattend.xml to prevent sysprep from reusing the install-time answer file
+            mv C:\Windows\Panther\unattend.xml C:\Windows\Panther\unattend.install.xml
+
+            # Eject CD to prevent autounattend.xml on CD from being picked up by sysprep
+            (New-Object -COMObject Shell.Application).NameSpace(17).ParseName("F:").InvokeVerb("Eject")
+        ```{{"{{copy}}"}}
+
+        The post-install script renames the cached install answer file and
+        ejects its CD, preventing a clone from repeating the installer setup.
+        Keep the `autounattend.xml` and `post-install.ps1` key names unchanged.
+
+        Validate and create the edited ConfigMap:
+
+        ```
+        oc create --dry-run=server -n windows-golden-images -f configmap-windows2k25-autounattend.yaml
+        oc create -n windows-golden-images -f configmap-windows2k25-autounattend.yaml
+        ```{{"{{execute}}"}}
+      review:
+        instructions: "Do you have a reachable ISO URL and a ConfigMap containing both reviewed answer-file keys?"
+        failedTaskHelp: "Check the ISO language, image description, VirtIO driver paths, XML syntax, license choice, and ConfigMap namespace. Do not proceed with placeholder media."
+      summary:
+        success: "Installation media and the custom Windows Setup files are ready."
+        failed: "Review the media and answer files before starting the installer."
+
+    - title: "Prepare the Windows installer pipeline"
+      description: |-
+        Download the Red Hat `windows-efi-installer` 4.21.0 pipeline used by
+        the cookbook, pinned to its source revision:
+
+        ```
+        curl --fail --location --output windows-efi-installer.yaml https://raw.githubusercontent.com/openshift-pipelines/tektoncd-catalog/8d0998738ee5fed226263d48cab78c381cba1adf/pipelines/windows-efi-installer/4.21.0/windows-efi-installer.yaml
+        oc create --dry-run=client --validate=false -n windows-golden-images -f windows-efi-installer.yaml -o json > windows-efi-installer.json
+        ```{{"{{execute}}"}}
+
+        This revision uses a 20 GiB root disk and imports upstream ConfigMaps.
+        Adapt the local copy to use a 60 GiB root disk and the answer file you
+        just created. The following script also requires explicit license
+        acceptance, preserves your ConfigMap during cleanup, and refuses to
+        replace an existing golden disk or DataSource:
+
+        ```
+        python3 - <<'PY'
+        import json
+        from pathlib import Path
+
+        path = Path('windows-efi-installer.json')
+        pipeline = json.loads(path.read_text())
+        pipeline['metadata']['namespace'] = 'windows-golden-images'
+        tasks = {task['name']: task for task in pipeline['spec']['tasks']}
+
+        def parameter(task, name):
+            return next(p for p in task['params'] if p['name'] == name)
+
+        parameter(tasks['import-autounattend-configmaps'], 'SCRIPT')['value'] = '''set -eu
+        if [ "$(params.acceptEula)" != "true" ]; then
+          echo "Review the Microsoft terms and explicitly accept them before running."
+          exit 1
+        fi
+        oc get configmap "$(params.autounattendConfigMapName)" -o jsonpath='{.data.autounattend\\.xml}' | grep -q '<AcceptEula>true</AcceptEula>'
+        '''
+        tasks['import-win-iso']['runAfter'] = ['import-autounattend-configmaps']
+        root = parameter(tasks['create-vm-root-disk'], 'manifest')
+        assert root['value'].count('storage: 20Gi') == 1, 'Unexpected pipeline disk layout'
+        root['value'] = root['value'].replace('storage: 20Gi', 'storage: 60Gi')
+        for name in ('create-vm-root-disk', 'create-datasource-root-disk'):
+            parameter(tasks[name], 'allowReplace')['value'] = 'false'
+        pipeline['spec']['finally'] = [
+            task for task in pipeline['spec']['finally']
+            if task['name'] != 'delete-imported-configmaps'
+        ]
+        # Tekton parameters are strings, including Boolean-like values.
+        for p in pipeline['spec']['params']:
+            if isinstance(p.get('default'), bool):
+                p['default'] = str(p['default']).lower()
+        for task in pipeline['spec']['tasks'] + pipeline['spec']['finally']:
+            for p in task.get('params', []):
+                if isinstance(p.get('value'), bool):
+                    p['value'] = str(p['value']).lower()
+        path.write_text(json.dumps(pipeline, indent=2) + '\n')
+        PY
+        ```{{"{{execute}}"}}
+
+        Review the resulting file, then validate and create the local Pipeline.
+        Its versioned tasks still resolve through the Tekton hub resolver:
+
+        ```
+        oc create --dry-run=server -n windows-golden-images -f windows-efi-installer.json
+        oc create -n windows-golden-images -f windows-efi-installer.json
+        ```{{"{{execute}}"}}
+      review:
+        instructions: "Did the adapted Pipeline pass server validation and get created in the tutorial project?"
+        failedTaskHelp: "Use the pinned download and start from a fresh JSON conversion if the script fails. Confirm Pipelines and the hub resolver are available; do not overwrite an unrelated Pipeline."
+      summary:
+        success: "The local installer Pipeline uses the custom answer file and a 60 GiB disk."
+        failed: "Resolve the Pipeline validation or creation error."
+
+    - title: "Build and verify the golden image"
+      description: |-
+        Save this as `pipelinerun-windows2k25.yaml`. Replace the ISO placeholder
+        with your approved URL. Set `acceptEula` to `"true"` only after reviewing
+        and accepting the Microsoft terms, as for the ConfigMap. Leave the
+        quoted Boolean values as strings. The local Pipeline will reject a
+        run without both explicit acceptance settings.
+
+        ```yaml
+        apiVersion: tekton.dev/v1
+        kind: PipelineRun
+        metadata:
+          generateName: windows2k25-installer-run-
+          namespace: windows-golden-images
+        spec:
+          params:
+          - name: winImageDownloadURL
+            value: REPLACE_WITH_YOUR_ISO_URL
+          - name: acceptEula
+            value: 'false'
+          - name: preferenceName
+            value: windows.2k25.virtio
+          - name: autounattendConfigMapName
+            value: windows2k25-autounattend
+          - name: baseDvName
+            value: win2k25
+          - name: isoDVName
+            value: win2k25
+          pipelineRef:
+            name: windows-efi-installer
+          taskRunSpecs:
+          - pipelineTaskName: modify-windows-iso-file
+            podTemplate:
+              securityContext:
+                fsGroup: 107
+                runAsUser: 107
+          timeouts:
+            pipeline: 2h0m0s
+            tasks: 1h50m0s
+            finally: 10m0s
+          taskRunTemplate:
+            serviceAccountName: windows-image-builder
+        ```{{"{{copy}}"}}
+
+        Validate the edited file, then use `oc create` because it uses
+        `generateName`. Keep the returned run name in this terminal:
+
+        ```
+        oc create --dry-run=server -n windows-golden-images -f pipelinerun-windows2k25.yaml
+        WINDOWS_RUN=$(oc create -n windows-golden-images -f pipelinerun-windows2k25.yaml -o name)
+        printf '%s\n' "$WINDOWS_RUN"
+        oc get -n windows-golden-images "$WINDOWS_RUN" -w
+        ```{{"{{execute}}"}}
+
+        Wait for `SUCCEEDED=True`, then press **Ctrl+C**. You can also use
+        **Pipelines → PipelineRuns** in the tutorial project to inspect tasks
+        and logs. The pipeline downloads and modifies the ISO, boots an
+        installer VM, waits for sysprep shutdown, publishes the golden disk,
+        and removes the temporary installer resources.
+
+        Verify all three results:
+
+        ```
+        oc get -n windows-golden-images "$WINDOWS_RUN"
+        oc get dv win2k25 -n windows-golden-images
+        oc get datasource win2k25 -n windows-golden-images -o yaml
+        ```{{"{{execute}}"}}
+
+        Expect a successful PipelineRun, a `Succeeded` DataVolume, and a
+        DataSource whose `spec.source.pvc` points to `win2k25` in this project
+        and whose `Ready` condition is `True`.
+
+        If the run fails, inspect the failed task before retrying. For ISO
+        modification errors, check the no-prompt EFI boot files in the media,
+        the SCC grant, and UID/group 107. For a stalled VM, inspect its console,
+        DataVolume events, available capacity, and the answer-file edition.
+        For resolver or image-pull errors, check hub access and registry credentials.
+        Do not retry into an existing `win2k25` disk; retain it deliberately
+        or clean up the failed tutorial resources first.
+      review:
+        instructions: "Did the PipelineRun succeed, with a Succeeded golden DataVolume and a Ready DataSource pointing to its PVC?"
+        failedTaskHelp: "Inspect the failed TaskRun, DataVolume events, or installer VM console. Resolve downloads, storage, permissions, answer files, or timeout errors before cloning."
+      summary:
+        success: "The generalized Windows disk is available through the win2k25 DataSource."
+        failed: "The golden image is not ready to clone."
+
+    - title: "Prepare the clone's first-boot settings"
+      description: |-
+        Save the following as `unattend.xml` in a private working directory.
+        Replace `REPLACE_WITH_UNIQUE_PASSWORD` with a strong, unique
+        Administrator password that meets Windows password requirements.
+        XML-escape special characters, for example `&` as `&amp;` and `<` as
+        `&lt;`. Keep the file out of source control and shared logs.
+
+        This file sets `WIN-SERVER-01`, extends the OS partition, and completes
+        first-boot setup. Unlike the installation file, its key is
+        **unattend.xml**, not **autounattend.xml**. This focused example uses
+        Console VNC access and does not configure automatic login or publish RDP.
+
+        ```xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <unattend xmlns="urn:schemas-microsoft-com:unattend">
+          <settings pass="specialize">
+            <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64"
+                       publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+              <ComputerName>WIN-SERVER-01</ComputerName>
+            </component>
+            <component name="Microsoft-Windows-Deployment" processorArchitecture="amd64"
+                       publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+              <ExtendOSPartition>
+                <Extend>true</Extend>
+              </ExtendOSPartition>
+            </component>
+          </settings>
+          <settings pass="oobeSystem">
+            <component xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
+                       name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64"
+                       publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+              <OOBE>
+                <HideEULAPage>true</HideEULAPage>
+                <HideOEMRegistrationScreen>true</HideOEMRegistrationScreen>
+                <HideOnlineAccountScreens>true</HideOnlineAccountScreens>
+                <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
+                <NetworkLocation>Work</NetworkLocation>
+                <SkipUserOOBE>true</SkipUserOOBE>
+                <SkipMachineOOBE>true</SkipMachineOOBE>
+              </OOBE>
+              <UserAccounts>
+                <AdministratorPassword>
+                  <Value>REPLACE_WITH_UNIQUE_PASSWORD</Value>
+                  <PlainText>true</PlainText>
+                </AdministratorPassword>
+              </UserAccounts>
+              <TimeZone>UTC</TimeZone>
+            </component>
+          </settings>
+        </unattend>
+        ```{{"{{copy}}"}}
+
+        Check the edited XML and reject the placeholder without printing the password:
+
+        ```
+        chmod 600 unattend.xml
+        python3 - <<'PY'
+        from pathlib import Path
+        from xml.etree import ElementTree
+        content = Path('unattend.xml').read_text()
+        assert 'REPLACE_WITH_UNIQUE_PASSWORD' not in content, 'Set your own password first'
+        ElementTree.fromstring(content)
+        print('XML is well formed and the placeholder is replaced.')
+        PY
+        ```{{"{{execute}}"}}
+
+        Store it in a Secret instead of the cookbook's password-bearing ConfigMap:
+
+        `oc create secret generic win2k25-sysprep-unattend -n windows-golden-images --from-file=unattend.xml`{{"{{execute}}"}}
+
+        KubeVirt supports either source for sysprep. Restrict access to this
+        Secret and local file; the guest password is still present in the
+        answer file. Give each future clone its own hostname and credentials.
+      review:
+        instructions: "Did the XML check pass, and did you create the clone's Secret with an unattend.xml key and your own password?"
+        failedTaskHelp: "Check the password placeholder, XML escaping, exact filename, Secret name, and project. Do not print or share the Secret contents."
+      summary:
+        success: "The clone has its own first-boot settings in a Secret."
+        failed: "Prepare valid clone settings before creating the VM."
+
+    - title: "Clone and verify the Windows VM"
+      description: |-
+        Save the following as `windows-vm-from-golden.yaml`. It clones a new
+        60 GiB disk from the DataSource and mounts the clone's sysprep Secret.
+        The cluster instancetype supplies compute resources and the Windows
+        preference supplies the guest's hardware defaults.
+
+        ```yaml
+        apiVersion: kubevirt.io/v1
+        kind: VirtualMachine
+        metadata:
+          name: win2k25-vm-1
+          namespace: windows-golden-images
+          labels:
+            app.kubernetes.io/managed-by: partner-labs-console-plugin
+        spec:
+          dataVolumeTemplates:
+          - apiVersion: cdi.kubevirt.io/v1beta1
+            kind: DataVolume
+            metadata:
+              name: win2k25-vm-1-disk
+            spec:
+              sourceRef:
+                kind: DataSource
+                name: win2k25
+                namespace: windows-golden-images
+              storage:
+                resources:
+                  requests:
+                    storage: 60Gi
+          runStrategy: RerunOnFailure
+          instancetype:
+            name: u1.large
+            kind: VirtualMachineClusterInstancetype
+          preference:
+            name: windows.2k25.virtio
+            kind: VirtualMachineClusterPreference
+          template:
+            spec:
+              domain:
+                devices:
+                  disks:
+                  - name: rootdisk
+                    disk:
+                      bus: virtio
+                  - name: sysprep
+                    cdrom:
+                      bus: sata
+                  interfaces:
+                  - name: default
+                    masquerade: {}
+              volumes:
+              - name: rootdisk
+                dataVolume:
+                  name: win2k25-vm-1-disk
+              - name: sysprep
+                sysprep:
+                  secret:
+                    name: win2k25-sysprep-unattend
+              networks:
+              - name: default
+                pod: {}
+        ```{{"{{copy}}"}}
+
+        Validate and create it:
+
+        ```
+        oc create --dry-run=server -n windows-golden-images -f windows-vm-from-golden.yaml
+        oc create -n windows-golden-images -f windows-vm-from-golden.yaml
+        oc get dv win2k25-vm-1-disk -n windows-golden-images -w
+        ```{{"{{execute}}"}}
+
+        When the cloned DataVolume shows `Succeeded`, press **Ctrl+C**.
+        Check VM readiness and guest-agent information:
+
+        ```
+        oc wait vm/win2k25-vm-1 -n windows-golden-images --for=condition=Ready --timeout=600s
+        oc get vmi win2k25-vm-1 -n windows-golden-images
+        oc get vmi win2k25-vm-1 -n windows-golden-images -o jsonpath='{.status.guestOSInfo}{"\n"}'
+        ```{{"{{execute}}"}}
+
+        Allow several minutes for Windows first-boot setup and the QEMU guest
+        agent. Expect a running instance and guest OS information identifying
+        Windows Server 2025. A running VM alone does not prove customization succeeded.
+
+        In **Virtualization → VirtualMachines**, select `windows-golden-images`,
+        open `win2k25-vm-1`, and use **Console → VNC**. Log in as Administrator
+        with the password you chose. Run `hostname` in the guest's command
+        prompt or PowerShell; expect `WIN-SERVER-01`.
+
+        If the OOBE wizard appears, check the Secret reference and the
+        `unattend.xml` key. If guest OS information stays empty, check the QEMU
+        Guest Agent service inside Windows and the installer task's driver logs.
+      review:
+        instructions: "Is the clone running, does its guest agent report Windows Server 2025, and does guest login confirm WIN-SERVER-01?"
+        failedTaskHelp: "Inspect the clone's DataVolume and VM events, wait for OOBE, and check the sysprep Secret reference and QEMU Guest Agent service."
+      summary:
+        success: "The golden image produced a working Windows VM with its own identity."
+        failed: "Verify the guest, not only the VM's running state."
+
+    - title: "Retain or clean up the tutorial resources"
+      description: |-
+        Decide whether to keep the golden image. For a later update, build
+        from reviewed media using a new `baseDvName`, such as `win2k25-v2`,
+        and update future clones to reference that DataSource. Keep the prior
+        version until you have verified the replacement. Do not boot or reuse
+        the generalized golden disk itself as a working VM.
+
+        If retaining the resources, stop the test clone from its Console
+        Actions menu when idle. Its disks still consume storage.
+
+        If removing the tutorial, first confirm that no PipelineRun is active
+        and review the resources in the dedicated project:
+
+        ```
+        oc get pipelinerun,vm,dv,pvc,datasource -n windows-golden-images
+        oc get configmap,secret -n windows-golden-images
+        ```{{"{{execute}}"}}
+
+        If a run is still active, cancel it gracefully from **Pipelines →
+        PipelineRuns** and wait for its final cleanup tasks before deleting
+        the project. Confirm that no other project relies on this golden image.
+
+        An administrator can revoke the tutorial account's grants:
+
+        ```
+        oc adm policy remove-scc-from-user anyuid -z windows-image-builder -n windows-golden-images
+        oc adm policy remove-role-from-user edit -z windows-image-builder -n windows-golden-images
+        ```{{"{{execute}}"}}
+
+        **Only if this is still the project you created solely for this
+        tutorial and none of its data is needed**, delete it:
+
+        `oc delete project windows-golden-images`{{"{{execute}}"}}
+
+        This removes the clone, golden image, disks, answer files, local
+        Pipeline, and PipelineRuns. Verify the project is eventually `NotFound`:
+
+        `oc get project windows-golden-images`{{"{{execute}}"}}
+
+        Also remove your local `unattend.xml` and any files containing private
+        ISO URLs or generated credentials when they are no longer needed.
+      review:
+        instructions: "Did you deliberately retain the image and stop the clone, or revoke the grants and verify the dedicated project's deletion?"
+        failedTaskHelp: "Review active runs and disk ownership before deletion. If the project remains Terminating, ask an administrator to inspect it rather than forcing finalizer removal."
+      summary:
+        success: "You chose how to retain or remove the image, clone, and tutorial access."
+        failed: "Verify the resources and access match your cleanup choice."
+  conclusion: |-
+    You prepared Windows Setup files, built and generalized a Windows Server
+    2025 image with Tekton, and cloned it with per-VM sysprep settings.
+    DataSources make the golden disk reusable; a separate cloned disk and
+    answer file give each VM its own state and identity.
+
+    Adapted from [Creating Windows Golden Images](https://github.com/RedHatQuickCourses/ocp-virt-cookbook/blob/dfa9150f9c405da76364c1f3b14abfef738cb0c7/modules/vm-lifecycle/pages/windows-golden-images.adoc).
+    See that cookbook for other Windows versions and
+    [KubeVirt sysprep examples](https://kubevirt.io/user-guide/user_workloads/startup_scripts/#sysprep-examples)
+    for answer-file delivery options. This walkthrough keeps the Server 2025
+    build-and-clone workflow focused; other versions need matching media,
+    image descriptions, preferences, and driver paths.
+  nextQuickStart: []
+{{- end }}

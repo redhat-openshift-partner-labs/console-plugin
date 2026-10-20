@@ -128,6 +128,15 @@ test.describe('Console plugin cards', () => {
     await expect(page.getByText('Open OperatorHub', { exact: true })).toBeVisible();
   });
 
+  test('opens the Windows golden images quick start', async ({ page }) => {
+    await page.goto('/partner-labs-demos');
+    await page.getByTestId('card-action-windows-golden-images').click();
+    await expect(
+      page.getByRole('heading', { name: 'Create Windows golden images', exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText('Prepare a dedicated project', { exact: true })).toBeVisible();
+  });
+
   test('opens the custom VM templates quick start', async ({ page }) => {
     await page.goto('/partner-labs-demos');
     await page.getByTestId('card-action-vm-templates').click();
