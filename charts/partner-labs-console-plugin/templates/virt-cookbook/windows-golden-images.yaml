@@ -41,7 +41,7 @@ spec:
     - "An existing AWS OpenShift cluster with virtualization-capable amd64 workers, the u1.large instancetype, and the windows.2k25.virtio preference"
     - "A default StorageClass suitable for VM disks and filesystem PVCs, with capacity for a 60 GiB golden disk, a 60 GiB clone, and temporary ISO storage; the ISO task also needs up to 24 GiB of node ephemeral storage"
     - "Permission to create a dedicated project and its resources; an administrator must grant the builder service account project access and the anyuid SCC"
-    - "An authenticated oc CLI, Bash, curl, Python 3, and a text editor; Run controls require Web Terminal"
+    - "An authenticated oc CLI, Bash, and a text editor; Run controls require Web Terminal"
     - "An approved English (United States), x64 Windows Server 2025 ISO URL and access to the applicable Microsoft license terms"
     - "Cluster access to the ISO URL, Artifact Hub, GitHub, and the pipeline task images, including authenticated pulls from registry.redhat.io"
   introduction: |-
@@ -268,7 +268,7 @@ spec:
 
             # Eject CD to prevent autounattend.xml on CD from being picked up by sysprep
             (New-Object -COMObject Shell.Application).NameSpace(17).ParseName("F:").InvokeVerb("Eject")
-        ```{{"{{copy}}"}}
+        ```
 
         The post-install script renames the cached install answer file and
         ejects its CD, preventing a clone from repeating the installer setup.
@@ -287,85 +287,14 @@ spec:
         success: "Installation media and the custom Windows Setup files are ready."
         failed: "Review the media and answer files before starting the installer."
 
-    - title: "Prepare the Windows installer pipeline"
-      description: |-
-        Download the Red Hat `windows-efi-installer` 4.21.0 pipeline used by
-        the cookbook, pinned to its source revision:
-
-        ```
-        curl --fail --location --output windows-efi-installer.yaml https://raw.githubusercontent.com/openshift-pipelines/tektoncd-catalog/8d0998738ee5fed226263d48cab78c381cba1adf/pipelines/windows-efi-installer/4.21.0/windows-efi-installer.yaml
-        oc create --dry-run=client --validate=false -n windows-golden-images -f windows-efi-installer.yaml -o json > windows-efi-installer.json
-        ```{{"{{execute}}"}}
-
-        This revision uses a 20 GiB root disk and imports upstream ConfigMaps.
-        Adapt the local copy to use a 60 GiB root disk and the answer file you
-        just created. The following script also requires explicit license
-        acceptance, preserves your ConfigMap during cleanup, and refuses to
-        replace an existing golden disk or DataSource:
-
-        ```
-        python3 - <<'PY'
-        import json
-        from pathlib import Path
-
-        path = Path('windows-efi-installer.json')
-        pipeline = json.loads(path.read_text())
-        pipeline['metadata']['namespace'] = 'windows-golden-images'
-        tasks = {task['name']: task for task in pipeline['spec']['tasks']}
-
-        def parameter(task, name):
-            return next(p for p in task['params'] if p['name'] == name)
-
-        parameter(tasks['import-autounattend-configmaps'], 'SCRIPT')['value'] = '''set -eu
-        if [ "$(params.acceptEula)" != "true" ]; then
-          echo "Review the Microsoft terms and explicitly accept them before running."
-          exit 1
-        fi
-        oc get configmap "$(params.autounattendConfigMapName)" -o jsonpath='{.data.autounattend\\.xml}' | grep -q '<AcceptEula>true</AcceptEula>'
-        '''
-        tasks['import-win-iso']['runAfter'] = ['import-autounattend-configmaps']
-        root = parameter(tasks['create-vm-root-disk'], 'manifest')
-        assert root['value'].count('storage: 20Gi') == 1, 'Unexpected pipeline disk layout'
-        root['value'] = root['value'].replace('storage: 20Gi', 'storage: 60Gi')
-        for name in ('create-vm-root-disk', 'create-datasource-root-disk'):
-            parameter(tasks[name], 'allowReplace')['value'] = 'false'
-        pipeline['spec']['finally'] = [
-            task for task in pipeline['spec']['finally']
-            if task['name'] != 'delete-imported-configmaps'
-        ]
-        # Tekton parameters are strings, including Boolean-like values.
-        for p in pipeline['spec']['params']:
-            if isinstance(p.get('default'), bool):
-                p['default'] = str(p['default']).lower()
-        for task in pipeline['spec']['tasks'] + pipeline['spec']['finally']:
-            for p in task.get('params', []):
-                if isinstance(p.get('value'), bool):
-                    p['value'] = str(p['value']).lower()
-        path.write_text(json.dumps(pipeline, indent=2) + '\n')
-        PY
-        ```{{"{{execute}}"}}
-
-        Review the resulting file, then validate and create the local Pipeline.
-        Its versioned tasks still resolve through the Tekton hub resolver:
-
-        ```
-        oc create --dry-run=server -n windows-golden-images -f windows-efi-installer.json
-        oc create -n windows-golden-images -f windows-efi-installer.json
-        ```{{"{{execute}}"}}
-      review:
-        instructions: "Did the adapted Pipeline pass server validation and get created in the tutorial project?"
-        failedTaskHelp: "Use the pinned download and start from a fresh JSON conversion if the script fails. Confirm Pipelines and the hub resolver are available; do not overwrite an unrelated Pipeline."
-      summary:
-        success: "The local installer Pipeline uses the custom answer file and a 60 GiB disk."
-        failed: "Resolve the Pipeline validation or creation error."
-
     - title: "Build and verify the golden image"
       description: |-
         Save this as `pipelinerun-windows2k25.yaml`. Replace the ISO placeholder
         with your approved URL. Set `acceptEula` to `"true"` only after reviewing
         and accepting the Microsoft terms, as for the ConfigMap. Leave the
-        quoted Boolean values as strings. The local Pipeline will reject a
-        run without both explicit acceptance settings.
+        quoted Boolean values as strings. As in the cookbook, the Tekton hub
+        resolver loads the published `windows-efi-installer` v4.21.0 pipeline
+        directly from the `redhat-pipelines` catalog.
 
         ```yaml
         apiVersion: tekton.dev/v1
@@ -388,7 +317,18 @@ spec:
           - name: isoDVName
             value: win2k25
           pipelineRef:
-            name: windows-efi-installer
+            params:
+            - name: catalog
+              value: redhat-pipelines
+            - name: type
+              value: artifact
+            - name: kind
+              value: pipeline
+            - name: name
+              value: windows-efi-installer
+            - name: version
+              value: v4.21.0
+            resolver: hub
           taskRunSpecs:
           - pipelineTaskName: modify-windows-iso-file
             podTemplate:
@@ -396,12 +336,10 @@ spec:
                 fsGroup: 107
                 runAsUser: 107
           timeouts:
-            pipeline: 2h0m0s
-            tasks: 1h50m0s
-            finally: 10m0s
+            pipeline: 1h0m0s
           taskRunTemplate:
             serviceAccountName: windows-image-builder
-        ```{{"{{copy}}"}}
+        ```
 
         Validate the edited file, then use `oc create` because it uses
         `generateName`. Keep the returned run name in this terminal:
@@ -496,21 +434,12 @@ spec:
             </component>
           </settings>
         </unattend>
-        ```{{"{{copy}}"}}
-
-        Check the edited XML and reject the placeholder without printing the password:
-
         ```
-        chmod 600 unattend.xml
-        python3 - <<'PY'
-        from pathlib import Path
-        from xml.etree import ElementTree
-        content = Path('unattend.xml').read_text()
-        assert 'REPLACE_WITH_UNIQUE_PASSWORD' not in content, 'Set your own password first'
-        ElementTree.fromstring(content)
-        print('XML is well formed and the placeholder is replaced.')
-        PY
-        ```{{"{{execute}}"}}
+
+        Review the XML syntax and replace the password placeholder before
+        continuing. Restrict access to the local answer file:
+
+        `chmod 600 unattend.xml`{{"{{execute}}"}}
 
         Store it in a Secret instead of the cookbook's password-bearing ConfigMap:
 
@@ -520,7 +449,7 @@ spec:
         Secret and local file; the guest password is still present in the
         answer file. Give each future clone its own hostname and credentials.
       review:
-        instructions: "Did the XML check pass, and did you create the clone's Secret with an unattend.xml key and your own password?"
+        instructions: "Did you review the XML and create the clone's Secret with an unattend.xml key and your own password?"
         failedTaskHelp: "Check the password placeholder, XML escaping, exact filename, Secret name, and project. Do not print or share the Secret contents."
       summary:
         success: "The clone has its own first-boot settings in a Secret."
@@ -588,7 +517,7 @@ spec:
               networks:
               - name: default
                 pod: {}
-        ```{{"{{copy}}"}}
+        ```
 
         Validate and create it:
 
@@ -661,8 +590,8 @@ spec:
 
         `oc delete project windows-golden-images`{{"{{execute}}"}}
 
-        This removes the clone, golden image, disks, answer files, local
-        Pipeline, and PipelineRuns. Verify the project is eventually `NotFound`:
+        This removes the clone, golden image, disks, answer files, and
+        PipelineRuns. Verify the project is eventually `NotFound`:
 
         `oc get project windows-golden-images`{{"{{execute}}"}}
 
