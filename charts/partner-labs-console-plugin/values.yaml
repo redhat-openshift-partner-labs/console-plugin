@@ -35,6 +35,8 @@ plugin:
     annotations: {}
     name: ""
   quickStarts:
+    windows-golden-images:
+      enabled: true
     install-configure-ocpv-operator:
       enabled: true
     vm-templates:
