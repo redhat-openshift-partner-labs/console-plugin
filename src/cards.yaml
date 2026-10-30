@@ -61,6 +61,12 @@
   body: Start a guided walkthrough for cloning virtual machines in OpenShift Virtualization.
   quickStartId: cloning-vms
 
+- id: windows-vm-virtio-drivers
+  kind: quickstart
+  title: Install Windows with VirtIO drivers
+  body: Upload installation media, install Windows Server 2025 with VirtIO drivers, and verify the QEMU guest agent.
+  quickStartId: windows-vm-virtio-drivers
+
 - id: pipeline
   kind: pipeline
   title: Tekton Pipeline

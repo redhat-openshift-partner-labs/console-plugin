@@ -35,6 +35,8 @@ plugin:
     annotations: {}
     name: ""
   quickStarts:
+    windows-vm-virtio-drivers:
+      enabled: true
     vm-ingress-routes:
       enabled: true
     install-configure-ocpv-operator:

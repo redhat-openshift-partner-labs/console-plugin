@@ -1,0 +1,405 @@
+# Adapted from the OpenShift Virtualization Cookbook:
+# https://github.com/RedHatQuickCourses/ocp-virt-cookbook/blob/81ce046ce5f684c111f5fb2ce2ae563bdc2a0469/modules/vm-configuration/pages/windows-vm-virtio-drivers.adoc
+#
+# MIT License
+# Copyright (c) 2025 OpenShift Virtualization Cookbook
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+{{- if (index .Values.plugin.quickStarts "windows-vm-virtio-drivers").enabled }}
+apiVersion: console.openshift.io/v1
+kind: ConsoleQuickStart
+metadata:
+  name: windows-vm-virtio-drivers
+  labels:
+    {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
+spec:
+  displayName: "Install Windows with VirtIO drivers"
+  description: "Upload installation media, install Windows Server 2025 with VirtIO drivers, and verify the QEMU guest agent."
+  durationMinutes: 90
+  tags:
+    - virtualization
+    - windows
+    - virtio
+  prerequisites:
+    - "OpenShift with OpenShift Virtualization installed and existing virtualization-capable amd64 workers on AWS"
+    - "The u1.large cluster instancetype and windows.2k25.virtio cluster preference"
+    - "A default StorageClass suitable for VM disks; for zonal AWS EBS storage, use WaitForFirstConsumer binding"
+    - "Capacity for a 60 GiB root disk, a 10 GiB Windows ISO volume, a 1 GiB VirtIO ISO volume, and any persistent firmware or TPM state requested by the preference"
+    - "Permission to create a dedicated project, DataVolumes, and VMs, upload images, and access VNC; an administrator may need to check cluster prerequisites"
+    - "Authenticated oc and matching virtctl CLI tools, a text editor, and access to the cluster's CDI upload proxy"
+    - "Approved Windows Server 2025 x64 installation media and applicable license terms; a VirtIO ISO with Server 2025 amd64 drivers"
+  introduction: |-
+    VirtIO drivers let Windows use the VM's paravirtualized storage and network
+    devices. Follow the cookbook's manual installation workflow: upload the
+    Windows and driver ISOs, load the storage driver in Windows Setup, then
+    install the other drivers and QEMU guest agent inside Windows.
+
+    This example consistently uses Windows Server 2025 and the
+    `windows.2k25.virtio` preference. Choose **Desktop Experience** during setup
+    to follow the graphical instructions. Allow time for ISO uploads and Windows
+    installation. No Pipelines Operator or additional AWS infrastructure is required.
+
+    Use one authenticated terminal and working directory. Commands explicitly
+    target a new `windows-virtio-demo` project. If that name exists, choose an
+    unused name and replace it in every command and manifest. Run controls
+    require Web Terminal; local ISO files must be available wherever `virtctl`
+    runs. Commands marked as Windows PowerShell run inside the guest instead.
+  tasks:
+    - title: "Prepare a project and installation media"
+      description: |-
+        Verify the cluster prerequisites:
+
+        `oc get crd virtualmachines.kubevirt.io datavolumes.cdi.kubevirt.io`{{"{{execute}}"}}
+
+        `oc get virtualmachineclusterinstancetype u1.large`{{"{{execute}}"}}
+
+        `oc get virtualmachineclusterpreference windows.2k25.virtio`{{"{{execute}}"}}
+
+        `oc get storageclass`{{"{{execute}}"}}
+
+        `oc get cdiconfig config -o jsonpath='{.status.uploadProxyURL}{"\n"}'`{{"{{execute}}"}}
+
+        Ask an administrator to resolve missing prerequisites or an empty upload
+        proxy URL. For AWS EBS, confirm the default StorageClass uses
+        **WaitForFirstConsumer** so the VM's disks can share a compatible zone.
+
+        Create the dedicated project. Stop if it already exists:
+
+        `oc create namespace windows-virtio-demo`{{"{{execute}}"}}
+
+        Put your approved Windows Server 2025 x64 ISO in the working directory
+        as `windows.iso`. Review the applicable Microsoft license terms; accept
+        them yourself during Windows Setup only if authorized.
+
+        Obtain the VirtIO ISO from **Virtualization > Settings > Downloads >
+        Windows drivers > Download ISO**, or the Red Hat Customer Portal.
+        Save it as `virtio-win.iso`. The cookbook also provides the
+        [Fedora VirtIO stable download](https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/).
+        Use a reviewed driver release with `2k25\amd64` directories.
+
+        Check that both local files exist:
+
+        `ls -lh windows.iso virtio-win.iso`{{"{{execute}}"}}
+
+        The next task reserves 10 GiB for Windows media and 1 GiB for drivers.
+        Increase those requests before creation if your files need more space,
+        allowing for filesystem overhead when using filesystem PVCs.
+      review:
+        instructions: "Do you have a new project, the required cluster resources and upload endpoint, and both reviewed ISO files?"
+        failedTaskHelp: "Check cluster permissions, the default storage binding mode, and the installed Windows preference. Download the ISOs into the same environment where virtctl runs."
+      summary:
+        success: "The project and installation media are ready."
+        failed: "Resolve the missing prerequisite before creating disks."
+
+    - title: "Create the disks and Windows VM"
+      description: |-
+        Save this as `windows-virtio-isos.yaml`:
+
+        ```yaml
+        apiVersion: cdi.kubevirt.io/v1beta1
+        kind: DataVolume
+        metadata:
+          name: virtio-drivers-iso
+          namespace: windows-virtio-demo
+        spec:
+          storage:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 1Gi
+          source:
+            upload: {}
+        ---
+        apiVersion: cdi.kubevirt.io/v1beta1
+        kind: DataVolume
+        metadata:
+          name: windows-installation-iso
+          namespace: windows-virtio-demo
+        spec:
+          storage:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 10Gi
+          source:
+            upload: {}
+        ```
+
+        Save this as `windows-vm-virtio.yaml`. It uses a 60 GiB blank disk,
+        a VirtIO network interface, and two SATA CD drives. The cluster
+        instancetype supplies CPU and memory; the preference supplies Windows
+        hardware and firmware defaults.
+
+        ```yaml
+        apiVersion: kubevirt.io/v1
+        kind: VirtualMachine
+        metadata:
+          name: windows-vm-virtio
+          namespace: windows-virtio-demo
+          labels:
+            app: windows-vm-virtio
+        spec:
+          runStrategy: Always
+          instancetype:
+            name: u1.large
+            kind: VirtualMachineClusterInstancetype
+          preference:
+            name: windows.2k25.virtio
+            kind: VirtualMachineClusterPreference
+          dataVolumeTemplates:
+            - metadata:
+                name: windows-vm-virtio-rootdisk
+              spec:
+                storage:
+                  accessModes:
+                    - ReadWriteOnce
+                  resources:
+                    requests:
+                      storage: 60Gi
+                source:
+                  blank: {}
+          template:
+            spec:
+              domain:
+                devices:
+                  disks:
+                    - name: rootdisk
+                      disk:
+                        bus: virtio
+                      bootOrder: 2
+                    - name: windows-installation-iso
+                      cdrom:
+                        bus: sata
+                        readonly: true
+                      bootOrder: 1
+                    - name: virtio-drivers-iso
+                      cdrom:
+                        bus: sata
+                        readonly: true
+                  interfaces:
+                    - name: default
+                      model: virtio
+                      masquerade: {}
+              networks:
+                - name: default
+                  pod: {}
+              volumes:
+                - name: rootdisk
+                  dataVolume:
+                    name: windows-vm-virtio-rootdisk
+                - name: windows-installation-iso
+                  dataVolume:
+                    name: windows-installation-iso
+                - name: virtio-drivers-iso
+                  dataVolume:
+                    name: virtio-drivers-iso
+        ```
+
+        Validate and create both files:
+
+        `oc create --dry-run=server -n windows-virtio-demo -f windows-virtio-isos.yaml -f windows-vm-virtio.yaml`{{"{{execute}}"}}
+
+        `oc create -n windows-virtio-demo -f windows-virtio-isos.yaml -f windows-vm-virtio.yaml`{{"{{execute}}"}}
+
+        `oc get vm,dv,pvc -n windows-virtio-demo`{{"{{execute}}"}}
+
+        The VM cannot boot until the uploads finish. Create it now so
+        **WaitForFirstConsumer** storage can select compatible placement for all
+        disks. Unlike the cookbook's immediate-binding example, these manifests
+        leave placement to the VM; do not add `--force-bind` to the uploads.
+        [CDI explains this scheduling behavior](https://github.com/kubevirt/containerized-data-importer/blob/main/doc/waitforfirstconsumer-storage-handling.md).
+      review:
+        instructions: "Do the VM and both upload DataVolumes exist in windows-virtio-demo?"
+        failedTaskHelp: "Check the YAML filenames, namespace, installed instancetype/preference, and oc get events -n windows-virtio-demo. Pending disks can be normal before scheduling and upload."
+      summary:
+        success: "The VM definition and upload targets are created."
+        failed: "Correct manifest or scheduling errors before uploading."
+
+    - title: "Upload the ISOs and open Windows Setup"
+      description: |-
+        Upload the driver ISO first, then Windows media to the existing
+        DataVolumes. Keep the terminal open until each upload completes:
+
+        `virtctl image-upload dv virtio-drivers-iso -n windows-virtio-demo --no-create --image-path=virtio-win.iso`{{"{{execute}}"}}
+
+        `virtctl image-upload dv windows-installation-iso -n windows-virtio-demo --no-create --image-path=windows.iso`{{"{{execute}}"}}
+
+        If upload fails with a certificate error, configure trust for the upload
+        proxy's certificate. For a trusted development endpoint with a self-signed
+        certificate, the cookbook's `--insecure` option is available; it disables
+        TLS certificate verification. Do not use it to fix scheduling or storage errors.
+
+        `oc get dv,pvc -n windows-virtio-demo`{{"{{execute}}"}}
+
+        Both ISO DataVolumes and the root disk must reach **Succeeded**.
+        If an upload pod cannot start, inspect project events and verify that
+        the VM exists and the workers have capacity. Volume node-affinity
+        conflicts on EBS can indicate disks in incompatible availability zones.
+
+        `oc wait vm/windows-vm-virtio -n windows-virtio-demo --for=condition=Ready --timeout=600s`{{"{{execute}}"}}
+
+        Open **Virtualization > VirtualMachines**, select `windows-virtio-demo`,
+        open `windows-vm-virtio`, and select **Console > VNC**. Alternatively,
+        run `virtctl vnc windows-vm-virtio -n windows-virtio-demo` from a local
+        terminal with a VNC viewer installed.
+
+        Press a key when prompted to boot from the Windows DVD. If that prompt
+        was missed, use the UEFI boot menu to select the Windows SATA CD drive.
+        If no DVD is available, verify both uploads and the VM's boot order.
+        A running VM alone does not mean Windows is installed.
+      review:
+        instructions: "Did the three DataVolumes succeed, and can you see Windows Setup in the VNC console?"
+        failedTaskHelp: "Check upload output, DataVolume/PVC events, and the two CD drive references. Verify the Windows ISO is bootable and first in the boot order."
+      summary:
+        success: "The VM has booted the Windows installation media."
+        failed: "Resolve the upload or boot issue before installing Windows."
+
+    - title: "Load the storage driver and install Windows"
+      description: |-
+        In Windows Setup, choose your language and the Windows Server 2025
+        edition you are licensed or authorized to evaluate. Select an edition
+        with **Desktop Experience**. Enter a product key if required by your
+        media, and review and accept the license terms if authorized.
+
+        Choose the custom installation option. At the disk-selection screen,
+        the VirtIO root disk might not appear until its driver is loaded:
+
+        1. Click **Load driver**, then **Browse**.
+        2. Find the VirtIO CD by its label; drive letters can vary.
+        3. Select `viostor\2k25\amd64` on that CD. For example, if it is drive
+           `E:`, use `E:\viostor\2k25\amd64`.
+        4. Select the compatible Red Hat VirtIO storage controller driver and
+           continue. Keep the option to hide incompatible drivers enabled.
+        5. Select the approximately 60 GiB root disk and continue installation.
+
+        This VM explicitly uses **bus: virtio**, which requires **viostor**.
+        **vioscsi** is for a disk using **bus: scsi**. If the disk is still
+        missing, verify the bus, Windows version, and amd64 driver directory.
+        Do not select an incompatible driver to bypass the check.
+
+        Let Windows restart as needed. After the first installation phase,
+        do not press a key to boot from DVD again; let it boot the root disk.
+        Complete first-boot setup and choose a strong, unique Administrator
+        password. Log in and confirm the Windows desktop opens.
+      review:
+        instructions: "Did Windows Setup detect the root disk after loading viostor, and can you log in to the installed Windows desktop?"
+        failedTaskHelp: "Use the Server 2025 amd64 viostor driver for this VirtIO disk. Check the selected edition and boot the root disk after setup restarts."
+      summary:
+        success: "Windows is installed on the VirtIO root disk."
+        failed: "Complete storage-driver loading and Windows installation."
+
+    - title: "Install the remaining drivers and verify integration"
+      description: |-
+        Inside Windows, open **Device Manager**. For each matching VirtIO device
+        with a warning, select **Update driver > Browse my computer for drivers**
+        and browse to its directory on the VirtIO CD. Install drivers only for
+        devices present in the VM:
+
+        | Device | Directory on the VirtIO CD |
+        | --- | --- |
+        | Network adapter | `NetKVM\2k25\amd64` |
+        | Memory balloon | `Balloon\2k25\amd64` |
+        | VirtIO serial controller | `vioserial\2k25\amd64` |
+        | VirtIO input device | `vioinput\2k25\amd64` |
+        | VirtIO entropy device | `viorng\2k25\amd64` |
+
+        Device labels can be generic, such as **Ethernet Controller**, **PCI
+        Device**, or **PCI Simple Communications Controller**. Check the driver
+        match rather than assuming every warning is the same device.
+
+        Open the VirtIO CD in File Explorer and run
+        `guest-agent\qemu-ga-x86_64.msi`. Complete the installer with
+        Administrator privileges. Reboot Windows if prompted, and log back in.
+        Open **Services** (`services.msc`) and confirm **QEMU Guest Agent** is running.
+
+        Run these checks in **Windows PowerShell inside the guest**:
+
+        ```powershell
+        Get-Service -DisplayName 'QEMU Guest Agent'
+        Get-NetAdapter
+        Get-NetIPConfiguration
+        ```
+
+        Expect the agent service to be **Running**, a working Red Hat VirtIO
+        network adapter, and an IP configuration. In Device Manager, verify
+        that the VM's VirtIO devices have no unresolved driver warnings.
+
+        Back in your authenticated OpenShift terminal, verify the agent connection:
+
+        `oc wait vmi/windows-vm-virtio -n windows-virtio-demo --for=condition=AgentConnected --timeout=300s`{{"{{execute}}"}}
+
+        `oc get vmi windows-vm-virtio -n windows-virtio-demo -o jsonpath='{.status.guestOSInfo}{"\n"}'`{{"{{execute}}"}}
+
+        `oc get vmi windows-vm-virtio -n windows-virtio-demo -o jsonpath='{.status.interfaces}{"\n"}'`{{"{{execute}}"}}
+
+        Expect guest OS information identifying Windows Server 2025. Interface
+        information helps check connectivity; it is not a performance benchmark.
+        If the agent does not connect, check the Windows service and the
+        `vioserial` driver. If networking fails, check NetKVM and the guest's
+        IP configuration. See [Red Hat's VirtIO driver guidance](https://docs.redhat.com/en/documentation/openshift_container_platform/4.22/html/virtualization/managing-vms)
+        for driver and guest-agent details.
+      review:
+        instructions: "Are the VirtIO devices working, the guest agent connected, and Windows Server 2025 details visible from OpenShift?"
+        failedTaskHelp: "Check Device Manager, the QEMU Guest Agent service, the vioserial and NetKVM drivers, and any required guest restart. VM readiness alone does not verify drivers."
+      summary:
+        success: "Windows drivers and guest-agent integration are verified."
+        failed: "Resolve the driver or guest-agent issue before finishing."
+
+    - title: "Retain or remove the demo resources"
+      description: |-
+        Stop the VM when finished. If it is already stopped, skip the stop command:
+
+        `virtctl stop windows-vm-virtio -n windows-virtio-demo`{{"{{execute}}"}}
+
+        `oc wait --for=delete vmi/windows-vm-virtio -n windows-virtio-demo --timeout=300s`{{"{{execute}}"}}
+
+        To retain the VM, keep the project and disks. In the stopped VM's
+        **Configuration > Boot order**, move the root disk ahead of the Windows
+        installation CD and save. Start the VM to verify that it boots the
+        installed Windows system, then stop it again when idle. Retained disks
+        still consume storage.
+
+        To remove the demo, review the resources first:
+
+        `oc get vm,dv,pvc -n windows-virtio-demo`{{"{{execute}}"}}
+
+        Confirm this is the dedicated project created for this walkthrough
+        and that no data needs to be kept. Deleting the namespace permanently
+        deletes its VM, ISO volumes, root disk, and other project resources:
+
+        `oc delete namespace windows-virtio-demo`{{"{{execute}}"}}
+
+        `oc get namespace windows-virtio-demo`{{"{{execute}}"}}
+
+        After deletion finishes, expect **NotFound**. If deletion stalls, inspect
+        remaining resources and events; let normal VM and storage cleanup finish.
+      review:
+        instructions: "Did you either retain a stopped VM with root-disk boot priority, or delete the dedicated demo project?"
+        failedTaskHelp: "Check VM shutdown and PVC deletion progress. Delete only the project created for this walkthrough; do not reuse an unrelated namespace for cleanup."
+      summary:
+        success: "The demo resources are retained intentionally or removed."
+        failed: "Finish the chosen retention or cleanup path."
+  conclusion: |-
+    You uploaded installation media, installed Windows on a VirtIO disk,
+    configured the remaining drivers, and verified guest-agent integration.
+    The original [Windows VirtIO cookbook tutorial](https://github.com/RedHatQuickCourses/ocp-virt-cookbook/blob/81ce046ce5f684c111f5fb2ce2ae563bdc2a0469/modules/vm-configuration/pages/windows-vm-virtio-drivers.adoc)
+    provides additional context.
+{{- end }}
