@@ -1,0 +1,363 @@
+{{- if (index .Values.plugin.quickStarts "remote-access-linux-vms").enabled }}
+apiVersion: console.openshift.io/v1
+kind: ConsoleQuickStart
+metadata:
+  name: remote-access-linux-vms
+  labels:
+    {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
+spec:
+  displayName: "Remote Access to Linux VMs"
+  description: "Learn six practical ways to access Linux virtual machines running on OpenShift Virtualization, from console troubleshooting to direct network SSH."
+  durationMinutes: 35
+  tags:
+    - virtualization
+    - kubevirt
+    - linux
+    - ssh
+  prerequisites:
+    - "OpenShift 4.19+ with the OpenShift Virtualization operator installed"
+    - "A shell with authenticated oc, kubectl, and virtctl CLI tools"
+    - "Permission to create and manage virtual machines and services in a project"
+    - "A VNC viewer if you want to use the graphical-access method"
+    - "Basic understanding of SSH, networking, and Kubernetes resources"
+  introduction: |-
+    This QuickStart demonstrates several ways to access Linux virtual machines
+    running on OpenShift Virtualization. Each method fits a different use case:
+    console access is useful for initial setup and troubleshooting, VNC provides
+    graphical access, virtctl SSH is convenient for cluster administrators,
+    NodePort exposes SSH externally, port forwarding is useful for temporary
+    development access, and secondary networks provide direct infrastructure-style
+    connectivity.
+
+    The examples use a Fedora VM named `fedora-access-vm` in the `vm-access-demo`
+    project. Replace those values with the VM and project in your environment.
+
+    The example password is for demonstration only. Use strong, unique credentials
+    or SSH keys in production, and prefer SSH keys with password authentication
+    disabled.
+  tasks:
+    - title: "Deploy a test Linux VM"
+      description: |-
+        1. Create the project:
+
+        `oc create namespace vm-access-demo`{{"{{execute}}"}}
+
+        2. Create a Fedora VM with SSH enabled. Save the following as
+           `fedora-access-vm.yaml`, replacing the placeholder public key:
+
+        ```yaml
+        apiVersion: kubevirt.io/v1
+        kind: VirtualMachine
+        metadata:
+          name: fedora-access-vm
+          namespace: vm-access-demo
+        spec:
+          dataVolumeTemplates:
+            - metadata:
+                name: fedora-access-vm-disk
+              spec:
+                sourceRef:
+                  kind: DataSource
+                  name: fedora
+                  namespace: openshift-virtualization-os-images
+                storage:
+                  resources:
+                    requests:
+                      storage: 30Gi
+          runStrategy: RerunOnFailure
+          instancetype:
+            name: u1.large
+          preference:
+            name: fedora
+          template:
+            metadata:
+              labels:
+                kubevirt.io/domain: fedora-access-vm
+            spec:
+              domain:
+                devices:
+                  disks:
+                    - name: rootdisk
+                      disk: {}
+                    - name: cloudinitdisk
+                      disk: {}
+                  interfaces:
+                    - name: default
+                      masquerade: {}
+                networks:
+                  - name: default
+                    pod: {}
+              volumes:
+                - name: rootdisk
+                  dataVolume:
+                    name: fedora-access-vm-disk
+                - name: cloudinitdisk
+                  cloudInitNoCloud:
+                    userData: |-
+                      #cloud-config
+                      user: fedora
+                      password: fedora123
+                      chpasswd:
+                        expire: false
+                      ssh_pwauth: true
+                      ssh_authorized_keys:
+                        - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... your-public-key-here
+        ```
+
+        3. Apply the VM and wait for it to become ready:
+
+        `oc apply -f fedora-access-vm.yaml`{{"{{execute}}"}}
+
+        `oc get vmi -n vm-access-demo`{{"{{execute}}"}}
+
+        Replace `your-public-key-here` with an actual public key, or use the
+        password only for short-lived testing.
+      review:
+        instructions: "Is the Fedora VM running in the vm-access-demo project?"
+        failedTaskHelp: "Check DataVolume, PVC, and VMI status with oc get dv,pvc,vmi -n vm-access-demo."
+      summary:
+        success: "You created a Linux VM to use with the access examples."
+        failed: "Resolve VM startup or storage issues before continuing."
+
+    - title: "Access the VM console with virtctl"
+      description: |-
+        The console requires no network connectivity and is useful for initial
+        setup, emergency access, and troubleshooting a VM that cannot be reached
+        over SSH.
+
+        1. Connect:
+
+        `virtctl console fedora-access-vm -n vm-access-demo`{{"{{execute}}"}}
+
+        2. Press **Ctrl+]** to exit the console.
+
+        Console access is text-only, provides limited copy/paste, has no scroll-back,
+        and supports one session at a time.
+      review:
+        instructions: "Did you connect to the VM console and exit with Ctrl+]?"
+        failedTaskHelp: "Confirm that the VMI is running with oc get vmi -n vm-access-demo."
+      summary:
+        success: "You used the console for direct, network-independent VM access."
+        failed: "Verify that the VM is running and retry the console connection."
+
+    - title: "Access a graphical VM with VNC"
+      description: |-
+        VNC is appropriate for Linux VMs with a desktop environment such as GNOME
+        or KDE.
+
+        1. Start a VNC session:
+
+        `virtctl vnc fedora-access-vm -n vm-access-demo`{{"{{execute}}"}}
+
+        A VNC viewer must be installed locally. Use VNC for graphical applications,
+        desktop access, and display troubleshooting.
+      review:
+        instructions: "Did the VNC viewer connect to the VM display?"
+        failedTaskHelp: "Install a VNC viewer locally and confirm the VM has a graphical desktop."
+      summary:
+        success: "You connected to the VM display with VNC."
+        failed: "Verify the VNC client and guest desktop environment."
+
+    - title: "Connect with virtctl SSH"
+      description: |-
+        `virtctl ssh` provides quick, authenticated SSH access through the cluster
+        API and uses port forwarding under the hood.
+
+        1. Connect with the VM user:
+
+        `virtctl ssh fedora@fedora-access-vm -n vm-access-demo`{{"{{execute}}"}}
+
+        2. For testing, you can skip host-key checking:
+
+        `virtctl ssh fedora@fedora-access-vm -n vm-access-demo --local-ssh-opts="-o StrictHostKeyChecking=no"`{{"{{execute}}"}}
+
+        The VM must have a running SSH service and a configured SSH key. This method
+        is well suited to administration, development, testing, and temporary access
+        when you already have cluster credentials.
+      review:
+        instructions: "Did you connect to the VM using virtctl ssh?"
+        failedTaskHelp: "Check that sshd is running and that the public key is present in cloud-init."
+      summary:
+        success: "You used virtctl SSH for authenticated cluster-based access."
+        failed: "Verify the guest SSH service and key configuration."
+
+    - title: "Expose SSH with a NodePort service"
+      description: |-
+        A NodePort provides an external endpoint for development or testing clusters.
+        It exposes SSH on every cluster node, so use strong authentication and avoid
+        this method for production unless the exposure is explicitly controlled.
+
+        1. Save and apply this Service as `fedora-ssh-nodeport.yaml`:
+
+        ```yaml
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: fedora-ssh-nodeport
+          namespace: vm-access-demo
+        spec:
+          type: NodePort
+          selector:
+            kubevirt.io/domain: fedora-access-vm
+          ports:
+            - protocol: TCP
+              port: 22
+              targetPort: 22
+        ```
+
+        `oc apply -f fedora-ssh-nodeport.yaml`{{"{{execute}}"}}
+
+        2. Find the assigned NodePort:
+
+        `oc get svc fedora-ssh-nodeport -n vm-access-demo`{{"{{execute}}"}}
+
+        3. Find a node IP and the assigned port:
+
+        `oc get nodes -o wide`{{"{{execute}}"}}
+
+        `oc get svc fedora-ssh-nodeport -n vm-access-demo -o jsonpath='{.spec.ports[0].nodePort}'`{{"{{execute}}"}}
+
+        4. Connect from a client that can reach the node:
+
+        `ssh fedora@<node-ip> -p <nodeport>`{{"{{execute}}"}}
+
+        Use firewall rules and network policies to limit exposure. NodePort is not
+        recommended for production without additional controls.
+      review:
+        instructions: "Did the NodePort service expose SSH and allow a connection?"
+        failedTaskHelp: "Check the selector, node firewall rules, SSH service, and the assigned NodePort."
+      summary:
+        success: "You exposed the VM SSH port externally with a NodePort."
+        failed: "Review service endpoints and network reachability."
+
+    - title: "Use port forwarding for temporary SSH access"
+      description: |-
+        Port forwarding is useful for development, testing, and troubleshooting when
+        you do not want to create a Service.
+
+        1. Find the VM launcher pod:
+
+        `oc get pods -n vm-access-demo`{{"{{execute}}"}}
+
+        2. Forward local port 2222 to the pod's SSH port:
+
+        `oc port-forward -n vm-access-demo virt-launcher-fedora-access-vm-xxxxx 2222:22`{{"{{execute}}"}}
+
+        Replace `virt-launcher-fedora-access-vm-xxxxx` with the actual pod name.
+        Keep the port-forward command running.
+
+        3. In another terminal, connect through the forwarded port:
+
+        `ssh fedora@localhost -p 2222`{{"{{execute}}"}}
+
+        The connection ends when the port-forward process stops. This method is not
+        intended for production or multiple simultaneous users.
+      review:
+        instructions: "Did you connect through the forwarded local port?"
+        failedTaskHelp: "Keep the port-forward process active and use the exact launcher pod name."
+      summary:
+        success: "You used port forwarding for temporary SSH access."
+        failed: "Verify the launcher pod and local port."
+
+    - title: "Use a secondary network for direct access"
+      description: |-
+        A VM connected to a bridge, localnet, or VLAN can be reached directly over
+        the secondary network. This is appropriate for production-style networking,
+        predictable addresses, and integration with an existing corporate network.
+
+        The VM must have a reachable secondary network and a static or reserved IP.
+        Use a NetworkAttachmentDefinition appropriate for your cluster, then add a
+        second interface and network to the VM. The following example illustrates the
+        relevant VM configuration:
+
+        ```yaml
+        apiVersion: kubevirt.io/v1
+        kind: VirtualMachine
+        metadata:
+          name: fedora-vlan-vm
+          namespace: vm-access-demo
+        spec:
+          template:
+            metadata:
+              labels:
+                kubevirt.io/domain: fedora-vlan-vm
+            spec:
+              domain:
+                devices:
+                  interfaces:
+                    - name: default
+                      masquerade: {}
+                    - name: vlan-network
+                      bridge: {}
+              networks:
+                - name: default
+                  pod: {}
+                - name: vlan-network
+                  multus:
+                    networkName: localnet-vlan-100
+        ```
+
+        Configure the guest network with cloud-init or another supported method,
+        then connect to its address:
+
+        `ssh fedora@192.168.100.100`{{"{{execute}}"}}
+
+        This approach avoids NodePort and port-forwarding overhead, but requires
+        correct routing, firewall rules, and network policy.
+      review:
+        instructions: "Can you reach the VM over its secondary-network IP?"
+        failedTaskHelp: "Verify the NetworkAttachmentDefinition, guest IP configuration, routes, and VLAN or bridge connectivity."
+      summary:
+        success: "You identified the requirements for direct secondary-network access."
+        failed: "Resolve secondary-network connectivity before continuing."
+
+    - title: "Verify SSH and apply security best practices"
+      description: |-
+        1. Generate an SSH key if needed:
+
+        `ssh-keygen -t rsa -b 4096 -f ~/.ssh/ocp-virt-key`{{"{{execute}}"}}
+
+        2. Verify VM and VMI state:
+
+        `oc get vm -n vm-access-demo`{{"{{execute}}"}}
+
+        `oc get vmi -n vm-access-demo`{{"{{execute}}"}}
+
+        `oc describe vmi fedora-access-vm -n vm-access-demo`{{"{{execute}}"}}
+
+        3. From the VM console, inspect SSH and firewall state:
+
+        `sudo systemctl status sshd`{{"{{execute}}"}}
+
+        `sudo ss -tlnp | grep :22`{{"{{execute}}"}}
+
+        `sudo firewall-cmd --list-all`{{"{{execute}}"}}
+
+        For production, use SSH keys only, disable password authentication and root
+        login, rotate keys, restrict NodePort exposure, use network policies, and
+        monitor access logs.
+      review:
+        instructions: "Did you verify the VM's SSH service and identify the security controls needed for production?"
+        failedTaskHelp: "Use the VM console to inspect sshd and firewall configuration."
+      summary:
+        success: "You verified SSH readiness and reviewed access-security controls."
+        failed: "Review the guest SSH and network configuration."
+  conclusion: |-
+    You learned how to access Linux VMs using the console, VNC, virtctl SSH,
+    NodePort, port forwarding, and secondary networks.
+
+    Choose the simplest method that meets the requirement: use the console for
+    troubleshooting, virtctl SSH for regular cluster-admin access, port forwarding
+    for temporary development access, and a secondary network for direct
+    infrastructure connectivity. Use NodePort only when an external endpoint is
+    required and the exposure is appropriately secured.
+
+    Remove the resources created for this walkthrough when finished:
+
+    `oc delete vm fedora-access-vm fedora-vlan-vm -n vm-access-demo`{{"{{execute}}"}}
+
+    `oc delete svc fedora-ssh-nodeport -n vm-access-demo`{{"{{execute}}"}}
+
+    `oc delete namespace vm-access-demo`{{"{{execute}}"}}
+  nextQuickStart: []
+{{- end }}
