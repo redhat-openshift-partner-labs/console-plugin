@@ -1,0 +1,232 @@
+# Adapted from the VM Monitoring and Metrics tutorial at:
+# https://github.com/RedHatQuickCourses/ocp-virt-cookbook/blob/dfa9150f9c405da76364c1f3b14abfef738cb0c7/modules/performance/pages/vm-monitoring-metrics.adoc
+{{- if (index .Values.plugin.quickStarts "vm-monitoring-metrics").enabled }}
+apiVersion: console.openshift.io/v1
+kind: ConsoleQuickStart
+metadata:
+  name: vm-monitoring-metrics
+  labels:
+    {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
+spec:
+  displayName: "Monitor VM performance and metrics"
+  description: "Create a Fedora VM, inspect its built-in charts, and query its KubeVirt metrics with PromQL."
+  durationMinutes: 20
+  tags:
+    - virtualization
+    - monitoring
+    - prometheus
+  prerequisites:
+    - "OpenShift 4.19+ with OpenShift Virtualization and cluster monitoring installed"
+    - "Capacity for one VM with 1 vCPU and 2 GiB of memory"
+    - "Permission to create and delete projects and VirtualMachines"
+    - "An authenticated oc CLI; Run controls require the Web Terminal Operator"
+    - "Cluster access to quay.io/containerdisks/fedora:latest and guest access to Fedora package repositories"
+    - "Cluster administrator access, or view access to all projects, for the Observe > Metrics queries"
+  introduction: |-
+    Create a disposable Fedora virtual machine and use OpenShift's built-in
+    monitoring tools to inspect its health and resource use. The VM uses an
+    ephemeral container disk, so the walkthrough does not require a
+    StorageClass.
+
+    You will:
+
+    - Create a VM with the QEMU guest agent.
+    - Inspect the VM's built-in utilization charts.
+    - Query CPU, memory, network, storage, and lifecycle metrics with PromQL.
+    - Remove the temporary project and all of its resources.
+  tasks:
+    - title: "Create the monitoring VM"
+      description: |-
+        Create and select a dedicated project. If `vm-monitoring-demo` already
+        exists, finish or remove the earlier demo before continuing.
+
+        `oc new-project vm-monitoring-demo`{{"{{execute}}"}}
+
+        Create a Fedora VM with one vCPU, 2 GiB of memory, and an ephemeral
+        root disk. Cloud-init installs and starts the QEMU guest agent.
+
+        ```
+        oc create -n vm-monitoring-demo -f - <<'YAML'
+        apiVersion: kubevirt.io/v1
+        kind: VirtualMachine
+        metadata:
+          name: monitoring-test-vm
+          labels:
+            app.kubernetes.io/managed-by: partner-labs-console-plugin
+        spec:
+          runStrategy: Always
+          template:
+            metadata:
+              labels:
+                kubevirt.io/domain: monitoring-test-vm
+                app: monitoring-demo
+                app.kubernetes.io/managed-by: partner-labs-console-plugin
+            spec:
+              domain:
+                cpu:
+                  cores: 1
+                memory:
+                  guest: 2Gi
+                devices:
+                  disks:
+                    - name: rootdisk
+                      disk:
+                        bus: virtio
+                    - name: cloudinitdisk
+                      disk:
+                        bus: virtio
+                  interfaces:
+                    - name: default
+                      masquerade: {}
+              networks:
+                - name: default
+                  pod: {}
+              volumes:
+                - name: rootdisk
+                  containerDisk:
+                    image: quay.io/containerdisks/fedora:latest
+                - name: cloudinitdisk
+                  cloudInitNoCloud:
+                    userData: |-
+                      #cloud-config
+                      packages:
+                        - qemu-guest-agent
+                      runcmd:
+                        - systemctl enable --now qemu-guest-agent
+        YAML
+        ```{{"{{execute}}"}}
+
+        Wait for the VM to become ready:
+
+        `oc wait -n vm-monitoring-demo vm/monitoring-test-vm --for=condition=Ready --timeout=300s`{{"{{execute}}"}}
+
+        Expect `condition met`. The ephemeral root disk is deleted with the VM.
+      review:
+        instructions: "Is monitoring-test-vm Ready in vm-monitoring-demo?"
+        failedTaskHelp: "Run `oc describe vm monitoring-test-vm -n vm-monitoring-demo` and inspect the VMI and launcher pod events. Check image access, guest repository access, quota, and node capacity."
+      summary:
+        success: "The monitoring VM is running."
+        failed: "Resolve VM startup errors before inspecting metrics."
+
+    - title: "Verify the guest agent and built-in charts"
+      description: |-
+        Wait for the QEMU guest agent to connect:
+
+        `oc wait -n vm-monitoring-demo vmi/monitoring-test-vm --for=condition=AgentConnected --timeout=300s`{{"{{execute}}"}}
+
+        Display the VM and VMI state:
+
+        `oc get vm,vmi -n vm-monitoring-demo`{{"{{execute}}"}}
+
+        In the web console:
+
+        1. Go to **Virtualization > VirtualMachines**.
+        2. Select the **vm-monitoring-demo** project.
+        3. Select **monitoring-test-vm**, then select the **Metrics** tab.
+        4. Review the CPU, memory, network, and storage charts.
+        5. Select the **Overview** tab and confirm that the VM is **Running**
+           and the guest agent is connected.
+
+        Metrics can take two or three minutes to appear after the VM starts.
+        A quiet VM can report values near zero for network or storage activity.
+      review:
+        instructions: "Do the VM page and CLI show a Running VM with a connected guest agent, and do the Metrics charts render?"
+        failedTaskHelp: "Wait a few minutes and refresh the page. If AgentConnected is not True, inspect `oc get vmi monitoring-test-vm -n vm-monitoring-demo -o yaml` and confirm that cloud-init could reach the Fedora repositories."
+      summary:
+        success: "The guest agent is connected and the built-in VM charts are available."
+        failed: "Resolve the VM, guest-agent, or metrics collection problem before continuing."
+
+    - title: "Query VM performance metrics"
+      description: |-
+        Go to **Observe > Metrics** in the Administrator perspective. Paste each
+        expression into the query field and select **Run queries**. Use **Add
+        query** to keep several results on the same page.
+
+        Show CPU use as a percentage across the VM's vCPUs:
+
+        ```
+        sum(rate(kubevirt_vmi_vcpu_seconds_total{namespace="vm-monitoring-demo",name="monitoring-test-vm"}[5m])) * 100
+        ```{{"{{copy}}"}}
+
+        Show resident memory in MiB:
+
+        ```
+        kubevirt_vmi_memory_resident_bytes{namespace="vm-monitoring-demo",name="monitoring-test-vm"} / 1024 / 1024
+        ```{{"{{copy}}"}}
+
+        Show combined receive and transmit traffic in bytes per second:
+
+        ```
+        sum(rate(kubevirt_vmi_network_receive_bytes_total{namespace="vm-monitoring-demo",name="monitoring-test-vm"}[5m])) + sum(rate(kubevirt_vmi_network_transmit_bytes_total{namespace="vm-monitoring-demo",name="monitoring-test-vm"}[5m]))
+        ```{{"{{copy}}"}}
+
+        Show combined storage reads and writes in bytes per second:
+
+        ```
+        sum(rate(kubevirt_vmi_storage_read_traffic_bytes_total{namespace="vm-monitoring-demo",name="monitoring-test-vm"}[5m])) + sum(rate(kubevirt_vmi_storage_write_traffic_bytes_total{namespace="vm-monitoring-demo",name="monitoring-test-vm"}[5m]))
+        ```{{"{{copy}}"}}
+
+        Set the time range to at least 15 minutes if the five-minute rate
+        expressions do not initially show a series. You can bookmark the
+        Metrics page URL to return to the same set of queries.
+      review:
+        instructions: "Did all four expressions run without a PromQL error and identify monitoring-test-vm in vm-monitoring-demo?"
+        failedTaskHelp: "Confirm the VM is Running, wait for metric collection, check the namespace and VM name filters, and verify that your account can view metrics for all projects."
+      summary:
+        success: "You queried CPU, memory, network, and storage metrics for the VM."
+        failed: "Correct the query, access, or collection issue before continuing."
+
+    - title: "Inspect VM lifecycle metrics"
+      description: |-
+        Add a query for the VM information metric:
+
+        ```
+        kubevirt_vmi_info{namespace="vm-monitoring-demo",name="monitoring-test-vm"}
+        ```{{"{{copy}}"}}
+
+        Add a second query for VMI phase counts in the demo project:
+
+        ```
+        kubevirt_vmi_phase_count{namespace="vm-monitoring-demo"}
+        ```{{"{{copy}}"}}
+
+        Run both queries. The information series identifies the VMI, while the
+        phase-count series shows the current lifecycle state. Together with the
+        resource queries, these metrics provide a compact monitoring view
+        without installing a separate dashboard product.
+      review:
+        instructions: "Do the information and phase-count queries return a series for the demo VM or project?"
+        failedTaskHelp: "Verify the VMI is Running and the query filters match vm-monitoring-demo. Wait two or three minutes, then run the queries again."
+      summary:
+        success: "You inspected the VM's identity and lifecycle metrics."
+        failed: "Confirm the running VMI and metrics access before continuing."
+
+    - title: "Clean up the monitoring demo"
+      description: |-
+        Delete the dedicated project and every resource created by this Quick
+        Start:
+
+        `oc delete project vm-monitoring-demo`{{"{{execute}}"}}
+
+        Verify that the project no longer exists:
+
+        `oc get project vm-monitoring-demo`{{"{{execute}}"}}
+
+        Expect a `NotFound` response. Because the VM used an ephemeral
+        container disk, this walkthrough does not create a PVC or persistent
+        volume.
+      review:
+        instructions: "Did vm-monitoring-demo finish deleting?"
+        failedTaskHelp: "Run `oc get namespace vm-monitoring-demo` until it returns NotFound. Delete only this dedicated demo project."
+      summary:
+        success: "The temporary project and monitoring VM were removed."
+        failed: "Wait for the dedicated project to finish deleting."
+  conclusion: |-
+    You created a Fedora VM, verified its guest agent, inspected its built-in
+    charts, and queried KubeVirt performance and lifecycle metrics with PromQL.
+    This core workflow uses the OpenShift metrics interface and does not require
+    external Grafana installation or changes to cluster monitoring settings.
+
+    Adapted from [VM Monitoring and Metrics](https://github.com/RedHatQuickCourses/ocp-virt-cookbook/blob/dfa9150f9c405da76364c1f3b14abfef738cb0c7/modules/performance/pages/vm-monitoring-metrics.adoc).
+  nextQuickStart: []
+{{- end }}
