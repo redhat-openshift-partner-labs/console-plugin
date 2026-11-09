@@ -1,0 +1,139 @@
+{{- if (index .Values.plugin.quickStarts "create-vm-cli-yaml").enabled }}
+apiVersion: console.openshift.io/v1
+kind: ConsoleQuickStart
+metadata:
+  name: create-vm-cli-yaml
+  labels:
+    {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
+spec:
+  displayName: "Create a VM with CLI YAML"
+  description: "Generate, review, and apply a VirtualMachine YAML manifest with the OpenShift CLI."
+  durationMinutes: 20
+  tags:
+    - virtualization
+    - kubevirt
+    - cli
+    - yaml
+  prerequisites:
+    - "OpenShift 4.19+ with OpenShift Virtualization installed"
+    - "An authenticated oc session and the virtctl command-line tool"
+    - "Permission to create VirtualMachines and DataVolumes in a project"
+    - "A Fedora DataSource available in openshift-virtualization-os-images"
+  introduction: |-
+    Create a virtual machine from the command line by generating and applying a
+    VirtualMachine YAML manifest. This workflow is useful for repeatable demos,
+    automation, and GitOps because the VM configuration can be reviewed and stored
+    as code.
+
+    This walkthrough uses a temporary project and a Fedora boot source. Replace the
+    SSH key placeholder with your own public key before applying the manifest.
+  tasks:
+    - title: "Create a project and verify the boot source"
+      description: |-
+        1. Open a terminal with an authenticated `oc` session.
+        2. Create and select an isolated project:
+
+        `oc new-project vm-cli-demo`{{"{{execute}}"}}
+
+        3. Confirm that the Fedora DataSource is available:
+
+        `oc get datasources -n openshift-virtualization-os-images`{{"{{execute}}"}}
+
+        Use a different project name if `vm-cli-demo` already exists.
+      review:
+        instructions: "Did you create or select a project and confirm that a Fedora DataSource is available?"
+        failedTaskHelp: "Check your cluster login, project permissions, OpenShift Virtualization installation, and the DataSource namespace."
+      summary:
+        success: "The project and Fedora boot source are ready."
+        failed: "Prepare an accessible project and boot source before continuing."
+    - title: "Generate and review the VM YAML"
+      description: |-
+        Generate a manifest with `virtctl`. The command requests 2 GiB of memory,
+        imports the Fedora DataSource, and configures cloud-user with your SSH key:
+
+        ```
+        virtctl create vm --name=demo-vm \
+          --volume-import type:ds,src:openshift-virtualization-os-images/fedora \\
+          --memory=2Gi \\
+          --user=cloud-user \\
+          --ssh-key="$(cat ~/.ssh/id_ed25519.pub)" > demo-vm.yaml
+        ```{{"{{copy}}"}}
+
+        Review the generated file before applying it:
+
+        `cat demo-vm.yaml`{{"{{execute}}"}}
+
+        If your SSH key has a different filename, update the `cat` path. Do not apply
+        the manifest while it still contains an example key or other placeholders.
+      review:
+        instructions: "Did you generate demo-vm.yaml and review its VM name, boot source, memory, and SSH key?"
+        failedTaskHelp: "Run virtctl create vm again with an available public SSH key, then inspect demo-vm.yaml."
+      summary:
+        success: "The VM manifest is generated and reviewed."
+        failed: "Review the generated manifest before applying it."
+    - title: "Apply the manifest and monitor the VM"
+      description: |-
+        Apply the manifest to create the VM and its boot disk:
+
+        `oc apply -f demo-vm.yaml`{{"{{execute}}"}}
+
+        Watch the VM and its instance:
+
+        `oc get vm,vmi -n vm-cli-demo -w`{{"{{execute}}"}}
+
+        Wait for the VirtualMachineInstance to reach `Running`. Disk import and
+        startup can take several minutes depending on cluster capacity and storage.
+      review:
+        instructions: "Does demo-vm have a Running VirtualMachineInstance?"
+        failedTaskHelp: "Inspect VM and DataVolume events with oc describe. Check the DataSource, StorageClass, quota, and node capacity."
+      summary:
+        success: "The VM is running."
+        failed: "Resolve provisioning or scheduling errors before connecting."
+    - title: "Connect to the VM over SSH"
+      description: |-
+        Use the cloud-user account configured by cloud-init:
+
+        `virtctl ssh cloud-user@vm/demo-vm -n vm-cli-demo`{{"{{execute}}"}}
+
+        The connection is forwarded through the OpenShift API. Exit the guest shell
+        with `exit` when you are finished.
+      review:
+        instructions: "Did virtctl ssh connect to the cloud-user account?"
+        failedTaskHelp: "Confirm the VM is Running, the public key matches your local private key, and cloud-init completed."
+      summary:
+        success: "You connected to the VM over SSH."
+        failed: "Check the VM state and cloud-init SSH configuration."
+    - title: "Practice lifecycle operations"
+      description: |-
+        Stop and start the VM without changing its manifest:
+
+        `virtctl stop vm/demo-vm -n vm-cli-demo`{{"{{execute}}"}}
+
+        `virtctl start vm/demo-vm -n vm-cli-demo`{{"{{execute}}"}}
+
+        Wait for the VM to return to `Running` after starting it.
+      review:
+        instructions: "Did you stop and start demo-vm successfully?"
+        failedTaskHelp: "Wait for each operation to finish and inspect VM events if it does not return to Running."
+      summary:
+        success: "You practiced VM lifecycle operations."
+        failed: "Complete the stop and start cycle before continuing."
+    - title: "Clean up the demo"
+      description: |-
+        Delete the project when you no longer need the VM:
+
+        `oc delete project vm-cli-demo`{{"{{execute}}"}}
+
+        Deleting the project permanently removes the VM and its associated disk.
+      review:
+        instructions: "Did you remove the temporary project when finished?"
+        failedTaskHelp: "Delete only the temporary demo project, and verify that any resources you need are stored elsewhere."
+      summary:
+        success: "The temporary VM project was removed."
+        failed: "Review the project and resource names before cleaning up."
+  conclusion: |-
+    You generated a VirtualMachine manifest, reviewed it, applied it to OpenShift,
+    connected to the VM, and practiced lifecycle operations. YAML-based VM creation
+    is a useful foundation for automation and GitOps workflows.
+  nextQuickStart: []
+{{- end }}

@@ -25,11 +25,29 @@
   body: Start a guided walkthrough defined by a ConsoleQuickStart resource.
   quickStartId: vm-instancetypes-and-preferences
 
+- id: create-vm-cli-yaml
+  kind: quickstart
+  title: Create a VM with CLI YAML
+  body: Generate, review, and apply a VirtualMachine YAML manifest with the OpenShift CLI.
+  quickStartId: create-vm-cli-yaml
+
+- id: virtctl-basics
+  kind: quickstart
+  title: Using virtctl for VM management
+  body: Install virtctl and use it to manage, access, and troubleshoot virtual machines.
+  quickStartId: virtctl-basics
+
 - id: install-configure-ocpv-operator
   kind: quickstart
   title: Install and configure OpenShift Virtualization
   body: Install the OpenShift Virtualization Operator and verify its deployment.
   quickStartId: install-configure-ocpv-operator
+
+- id: install-lvm-storage-operator
+  kind: quickstart
+  title: Install the LVM Storage Operator
+  body: Install and configure LVM storage on a cluster with a spare local disk.
+  quickStartId: install-lvm-storage-operator
 
 - id: create-vm-web-console
   kind: quickstart
@@ -43,12 +61,18 @@
   body: Follow a guided walkthrough to inspect, customize, and test reusable VM templates with the CLI.
   quickStartId: vm-templates
 
+- id: windows-golden-images
+  kind: quickstart
+  title: Create Windows golden images
+  body: Build a Windows Server 2025 golden image with Tekton, clone it with sysprep settings, and verify the guest.
+  quickStartId: windows-golden-images
+
 - id: vm-ingress-routes
   kind: quickstart
   title: Expose a VM with an HTTPS Route
   body: Run Nginx in a Fedora VM, expose it through a Service and an HTTPS Route, and clean up the demo resources.
   quickStartId: vm-ingress-routes
-  
+
 - id: vm-lifecycle-states
   kind: quickstart
   title: Understanding VM lifecycle states
@@ -66,6 +90,24 @@
   title: Install Windows with VirtIO drivers
   body: Upload installation media, install Windows Server 2025 with VirtIO drivers, and verify the QEMU guest agent.
   quickStartId: windows-vm-virtio-drivers
+
+- id: network-policies-vms
+  kind: quickstart
+  title: "VM Cookbook: Network Policies for VMs"
+  body: Deny incoming traffic to a VM, then allow HTTP from a labeled client using NetworkPolicy.
+  quickStartId: network-policies-vms
+
+- id: static-ip-configuration
+  kind: quickstart
+  title: "VM Cookbook: Static IP Configuration"
+  body: Configure static secondary addresses for two Fedora VMs on an isolated OVN network and test connectivity.
+  quickStartId: static-ip-configuration
+
+- id: cloud-init-fundamentals
+  kind: quickstart
+  title: Cloud-init Fundamentals
+  body: Follow a guided walkthrough to deliver first-boot configuration to a Fedora virtual machine with KubeVirt cloud-init NoCloud.
+  quickStartId: cloud-init-fundamentals
 
 - id: pipeline
   kind: pipeline

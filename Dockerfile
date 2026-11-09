@@ -5,11 +5,20 @@ USER root
 
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
-ADD . /usr/src/app
 WORKDIR /usr/src/app
 
+COPY package.json yarn.lock .yarnrc.yml ./
+COPY .yarn/releases ./.yarn/releases
+
 RUN LOCAL_YARN="node $(awk '/yarnPath:/{print $2}' .yarnrc.yml)" && \
-    $LOCAL_YARN install --immutable && $LOCAL_YARN build
+    $LOCAL_YARN install --immutable
+
+COPY console-extensions.json webpack.config.ts tsconfig.json .swcrc ./
+COPY src ./src
+COPY locales ./locales
+
+RUN LOCAL_YARN="node $(awk '/yarnPath:/{print $2}' .yarnrc.yml)" && \
+    $LOCAL_YARN build
 
 FROM registry.access.redhat.com/ubi9/nginx-120:latest
 

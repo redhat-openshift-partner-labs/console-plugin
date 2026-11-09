@@ -71,35 +71,52 @@ Helm chart. Running only the local plugin server does not install that resource.
 ## Develop
 
 ```sh
-yarn install
+make install
 yarn start
 ```
 
 After `oc login`, run `yarn start-console` in another terminal and open
 <http://localhost:9000/partner-labs-demos>.
 
-Run checks with `yarn test`, `yarn lint`, and `yarn build`.
-
-The Playwright test installs the Helm chart on the target cluster, then removes
-the release and its namespace. Set `PLUGIN_TEMPLATE_PULL_SPEC` to a pullable
-plugin image before running `yarn test-e2e-headless`.
+Run `make help` to see the available workflows. `make check` runs linting,
+unit tests, Quick Start validation, and the plugin build. Note that the existing
+`yarn lint` script applies fixes, so `make lint` and `make check` can update
+files.
 
 ## Deploy
 
-Build and push the image, then install the Helm chart:
+Build, push, and deploy an image in order with `make release`:
 
 ```sh
-docker build -t quay.io/my-repository/partner-labs-console-plugin:latest .
-docker push quay.io/my-repository/partner-labs-console-plugin:latest
-helm upgrade -i partner-labs-console-plugin charts/partner-labs-console-plugin \
-  -n partner-labs-console-plugin --create-namespace \
-  --set plugin.image=quay.io/my-repository/partner-labs-console-plugin:latest
+make release IMAGE=quay.io/your-namespace/partner-labs-console-plugin:latest
 ```
 
-On Apple Silicon, build an amd64 image for amd64 OpenShift nodes with
-`podman build --platform linux/amd64 -t quay.io/my-repository/partner-labs-console-plugin:v2 .`.
-The Node build stage runs natively; the final nginx stage uses the requested
-platform. Push the new tag and set `plugin.image` to that tag in the Helm upgrade.
+The `build`, `push`, and `deploy` targets are also available individually;
+`make build-push` combines the first two. The container engine defaults to
+Podman; set `CONTAINER_ENGINE=docker` to use Docker. The build platform defaults
+to `linux/amd64`, which is useful when building for amd64 OpenShift nodes from
+Apple Silicon. The release and namespace default to
+`partner-labs-console-plugin`; override them with `RELEASE` and `NAMESPACE`.
+Set `KUBE_CONTEXT` to select a specific cluster context for deployment.
+
+Deploy a pull request to a test cluster with one target:
+
+```sh
+make deploy-pr PR=50 IMAGE_REGISTRY=quay.io/your-namespace
+```
+
+This checks out the PR, builds and pushes
+`quay.io/your-namespace/pr-50-quickstart:latest`, then deploys it with a PR-specific
+Helm release and namespace. Helm uses the current context from `KUBECONFIG` or
+the default kubeconfig; set `KUBE_CONTEXT` only to override that context. The
+working tree must be clean, and the selected container engine must be logged in
+to the image registry; the cluster must be able to pull the image. The target
+leaves the working tree checked out to the PR. Set `IMAGE` to a full image
+reference to override the generated image name. The PR-specific deployment stays
+available for manual review until its release and namespace are removed.
+
+Reviewers can check out a pull request with `make checkout-pr PR=<number>`.
+This target requires the GitHub CLI and a clean working tree.
 
 Set `plugin.quickStarts.vm-instancetypes-and-preferences.enabled=false` to omit the
 walkthrough resource.

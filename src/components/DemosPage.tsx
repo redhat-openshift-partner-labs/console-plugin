@@ -178,6 +178,8 @@ const DemosPageContent: FC = () => {
       <PageSection>
         <Tabs
           activeKey={activeTab}
+          // Keep the hidden tab unmounted so the Activity watches close when Catalog is shown.
+          unmountOnExit
           onSelect={(_event, key) => {
             setActiveTab(key as 'catalog' | 'activity');
           }}

@@ -1,0 +1,302 @@
+{{- if (index .Values.plugin.quickStarts "static-ip-configuration").enabled }}
+apiVersion: console.openshift.io/v1
+kind: ConsoleQuickStart
+metadata:
+  name: static-ip-configuration
+  labels:
+    {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
+spec:
+  displayName: "VM Cookbook: Static IP Configuration"
+  description: "Configure static secondary IPs with cloud-init, test connectivity between two Fedora VMs, and verify persistence after a restart."
+  durationMinutes: 20
+  tags:
+    - virtualization
+    - networking
+  prerequisites:
+    - "OpenShift 4.19+ with OpenShift Virtualization and OVN-Kubernetes secondary networking enabled"
+    - "Capacity for two VMs, each with 1 vCPU and 2 GiB of memory, and access to quay.io/containerdisks/fedora:latest"
+    - "Permission to create a project, NetworkAttachmentDefinitions, and VirtualMachines, and to delete the demo resources"
+    - "Authenticated oc and matching virtctl CLIs, plus Bash; Run controls require the Web Terminal Operator"
+  introduction: |-
+    Give two Fedora VMs static secondary addresses using cloud-init `networkData`.
+    Keep DHCP on the primary masquerade interface for cluster connectivity.
+
+    An isolated OVN Layer 2 overlay carries traffic between the VMs on AWS
+    without physical VLANs, extra NICs, or an external DHCP server. These
+    secondary addresses are internal to the overlay, not AWS VPC addresses.
+    There is no secondary gateway or DNS server. You manage address uniqueness
+    yourself; OVN does not allocate addresses on this network.
+  tasks:
+    - title: "Create a dedicated test project"
+      description: |-
+        Create a new project:
+
+        `oc new-project static-ip-demo`{{"{{execute}}"}}
+
+        Confirm that the required APIs are available:
+
+        `oc api-resources --api-group=k8s.cni.cncf.io`{{"{{execute}}"}}
+
+        `oc api-resources --api-group=kubevirt.io`{{"{{execute}}"}}
+
+        Expect `NetworkAttachmentDefinition` and `VirtualMachine` resources.
+      review:
+        instructions: "Did you create a new project and find both required resource types?"
+        failedTaskHelp: "Check project permissions and ask your administrator to verify OpenShift Virtualization and OVN secondary networking."
+      summary:
+        success: "The dedicated project and required APIs are ready."
+        failed: "Resolve the prerequisites before continuing."
+
+    - title: "Create an isolated secondary network"
+      description: |-
+        Create an OVN Layer 2 `NetworkAttachmentDefinition`. Omitting subnets
+        disables OVN IP allocation so cloud-init can assign the guest addresses.
+        The network name must be unique across the cluster.
+
+        ```
+        oc create -n static-ip-demo -f - <<'YAML'
+        apiVersion: k8s.cni.cncf.io/v1
+        kind: NetworkAttachmentDefinition
+        metadata:
+          name: static-net
+        spec:
+          config: |-
+            {
+              "cniVersion": "0.3.1",
+              "name": "static-ip-demo-static-net",
+              "type": "ovn-k8s-cni-overlay",
+              "topology": "layer2",
+              "netAttachDefName": "static-ip-demo/static-net"
+            }
+        YAML
+        ```{{"{{execute}}"}}
+
+        `oc get network-attachment-definition static-net -n static-ip-demo -o yaml`{{"{{execute}}"}}
+
+        The VM startup and ping checks will verify that the network is working properly.
+      review:
+        instructions: "Does static-net contain the Layer 2 configuration without a subnets field?"
+        failedTaskHelp: "Check the JSON syntax, resource permissions, and netAttachDefName, which must match the namespace and NAD name."
+      summary:
+        success: "The isolated secondary network is defined."
+        failed: "Fix the network definition before starting the VMs."
+
+    - title: "Start two VMs with static secondary addresses"
+      description: |-
+        This command creates two VMs: `static-vm-50` with secondary address
+        192.168.100.50/24 and `static-vm-51` with secondary address 192.168.100.51/24.
+
+        Cloud-init matches the secondary NIC by its explicit MAC address rather
+        than assuming a guest interface name. The primary NIC keeps DHCP for
+        cluster connectivity.
+
+        The password `static-demo-only` is for these disposable demo VMs.
+        No SSH password access is enabled. Use SSH keys and persistent disks
+        for a real workload.
+
+        ```
+        for VM_ID in 50 51; do
+          oc create -n static-ip-demo -f - <<YAML || break
+        apiVersion: kubevirt.io/v1
+        kind: VirtualMachine
+        metadata:
+          name: static-vm-${VM_ID}
+        spec:
+          runStrategy: Always
+          template:
+            spec:
+              domain:
+                cpu:
+                  cores: 1
+                memory:
+                  guest: 2Gi
+                devices:
+                  disks:
+                    - name: rootdisk
+                      disk:
+                        bus: virtio
+                    - name: cloudinitdisk
+                      disk:
+                        bus: virtio
+                  interfaces:
+                    - name: default
+                      masquerade: {}
+                      macAddress: "02:00:00:00:01:${VM_ID}"
+                    - name: static-net
+                      bridge: {}
+                      macAddress: "02:00:00:00:02:${VM_ID}"
+              networks:
+                - name: default
+                  pod: {}
+                - name: static-net
+                  multus:
+                    networkName: static-net
+              volumes:
+                - name: rootdisk
+                  containerDisk:
+                    image: quay.io/containerdisks/fedora:latest
+                - name: cloudinitdisk
+                  cloudInitNoCloud:
+                    userData: |-
+                      #cloud-config
+                      user: fedora
+                      password: static-demo-only
+                      chpasswd:
+                        expire: false
+                      ssh_pwauth: false
+                    networkData: |-
+                      version: 2
+                      ethernets:
+                        primary:
+                          match:
+                            macaddress: "02:00:00:00:01:${VM_ID}"
+                          dhcp4: true
+                        secondary:
+                          match:
+                            macaddress: "02:00:00:00:02:${VM_ID}"
+                          dhcp4: false
+                          dhcp6: false
+                          addresses:
+                            - 192.168.100.${VM_ID}/24
+        YAML
+        done
+        ```{{"{{execute}}"}}
+
+        ```
+        oc wait -n static-ip-demo vm/static-vm-50 vm/static-vm-51 --for=condition=Ready --timeout=300s
+        ```{{"{{execute}}"}}
+
+        Expect condition met for both VMs. Guest cloud-init may still be finishing.
+      review:
+        instructions: "Are both VMs ready?"
+        failedTaskHelp: "Inspect oc describe vm and launcher pod events in static-ip-demo for capacity, image pull, or Multus errors."
+      summary:
+        success: "Both VMs are running with declarative guest network configuration."
+        failed: "Resolve VM startup failures before testing connectivity."
+
+    - title: "Verify addresses and test connectivity"
+      description: |-
+        Open the first VM's serial console. Press Enter if no prompt appears:
+
+        `virtctl console static-vm-50 -n static-ip-demo`{{"{{execute}}"}}
+
+        Log in as fedora with password `static-demo-only`. With the guest console
+        active in Web Terminal, run these commands:
+
+        ```
+        cloud-init status --wait
+        ip -4 -brief address
+        ip -4 route
+        ping -c 4 192.168.100.51
+        ```{{"{{execute}}"}}
+
+        Expect cloud-init status done, a DHCP address on the primary NIC, and
+        192.168.100.50/24 on the secondary NIC. The default route must use the
+        primary NIC.
+
+        Ping should receive four replies from the second VM. If the peer is
+        still booting, wait and repeat ping.
+
+        Exit the serial console with `Ctrl+]` before running cluster commands.
+        Check the second VM the same way:
+
+        `virtctl console static-vm-51 -n static-ip-demo`{{"{{execute}}"}}
+
+        Log in, then run these commands with the guest console active in Web Terminal:
+
+        ```
+        cloud-init status --wait
+        ip -4 -brief address
+        ping -c 4 192.168.100.50
+        ```{{"{{execute}}"}}
+
+        Expect 192.168.100.51/24 and four replies. Exit with `Ctrl+]`.
+
+        If either address is missing, inspect `sudo cat /var/log/cloud-init.log`
+        in that guest and compare the NIC MAC addresses with the `networkData`
+        match values.
+
+        For failed ping, check both guests' addresses and firewall rules,
+        Multus events, and any applicable network policies.
+      review:
+        instructions: "Do both guests have their declared addresses, and does ping work in both directions?"
+        failedTaskHelp: "Confirm cloud-init completed in both guests and check MAC matching, OVN secondary network support, and guest firewall rules."
+      summary:
+        success: "The two statically addressed VMs can communicate on the overlay."
+        failed: "Resolve address or connectivity errors before continuing."
+
+    - title: "Verify the address after a fresh VM start"
+      description: |-
+        Let's now verify that the VM retains the static ip address after it has been stopped.
+
+        From the cluster terminal, stop the first VM and wait for its instance
+        to disappear before starting it again:
+
+        `virtctl stop static-vm-50 -n static-ip-demo`{{"{{execute}}"}}
+
+        `oc wait -n static-ip-demo vmi/static-vm-50 --for=delete --timeout=180s`{{"{{execute}}"}}
+
+        `virtctl start static-vm-50 -n static-ip-demo`{{"{{execute}}"}}
+
+        `oc wait -n static-ip-demo vm/static-vm-50 --for=condition=Ready --timeout=300s`{{"{{execute}}"}}
+
+        `virtctl console static-vm-50 -n static-ip-demo`{{"{{execute}}"}}
+
+        Log in again, then run these commands with the guest console active in Web Terminal:
+
+        ```
+        cloud-init status --wait
+        ip -4 -brief address
+        ping -c 4 192.168.100.51
+        ```{{"{{execute}}"}}
+
+        Expect the same 192.168.100.50/24 address and four replies.
+
+        The container disk was recreated and cloud-init restored the declared
+        address. This demonstrates repeatable configuration, not persistence
+        of guest disk changes.
+
+        Exit the console with `Ctrl+]`.
+      review:
+        instructions: "Did the restarted VM regain 192.168.100.50/24 and reach its peer?"
+        failedTaskHelp: "Wait for cloud-init and inspect its logs; confirm the VM manifest still contains the original networkData and MAC address."
+      summary:
+        success: "The declared static address is restored after a fresh start."
+        failed: "Resolve the restart or cloud-init issue before cleanup."
+
+    - title: "Clean up the demo resources"
+      description: |-
+        In the cluster terminal, remove both VMs before deleting their network:
+
+        ```
+        oc delete vm static-vm-50 static-vm-51 -n static-ip-demo --wait=true
+        oc wait -n static-ip-demo vmi --all --for=delete --timeout=180s
+        oc delete network-attachment-definition static-net -n static-ip-demo
+        ```{{"{{execute}}"}}
+
+        Confirm that the demo resources are gone. Expect no output and no errors:
+
+        ```
+        oc get vm,vmi,network-attachment-definition -n static-ip-demo -o name
+        ```{{"{{execute}}"}}
+
+        If the project still contains only this tutorial's resources, delete it:
+
+        `oc delete project static-ip-demo`{{"{{execute}}"}}
+      review:
+        instructions: "Are both VMs, their instances, and the secondary network removed?"
+        failedTaskHelp: "Check deletion permissions and wait for VM instances and launcher pods to terminate before removing the network."
+      summary:
+        success: "The demo resources are removed."
+        failed: "Finish deleting the demo resources."
+  conclusion: |-
+    You configured two static secondary addresses with cloud-init, tested
+    bidirectional connectivity, and restored the same address after a fresh VM
+    start. The primary masquerade network retained DHCP and its default route.
+
+    Track static addresses to avoid conflicts.
+
+    For cluster-managed stable addressing, consider a
+    [primary User Defined Network with persistent IPAM](https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/virtualization/networking#virt-creating-a-primary-udn_virt-connecting-vm-to-primary-udn).
+  nextQuickStart: []
+{{- end }}

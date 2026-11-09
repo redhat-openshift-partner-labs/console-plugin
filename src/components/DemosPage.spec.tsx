@@ -56,6 +56,7 @@ const sdk = jest.requireMock<{
   >;
   setActiveQuickStart: jest.Mock;
   k8sGet: jest.Mock;
+  useK8sWatchResources: jest.Mock;
 }>('@openshift-console/dynamic-plugin-sdk');
 
 beforeEach(() => {
@@ -78,12 +79,30 @@ describe('DemosPage', () => {
     expect(screen.getByText('Creating Virtual Machines')).toBeInTheDocument();
     expect(screen.getByText('Custom VM Templates')).toBeInTheDocument();
     expect(screen.getByText('Cloning Virtual Machines')).toBeInTheDocument();
+    expect(screen.getByText('Cloud-init Fundamentals')).toBeInTheDocument();
     expect(screen.getByText('VM Instancetypes & Preferences')).toBeInTheDocument();
+    expect(screen.getByText('Using virtctl for VM management')).toBeInTheDocument();
     expect(screen.getByText('Install and configure OpenShift Virtualization')).toBeInTheDocument();
+    expect(screen.getByText('Install the LVM Storage Operator')).toBeInTheDocument();
     expect(screen.getByText('Create a VM from the web console')).toBeInTheDocument();
     expect(screen.getByText('Create custom VM templates')).toBeInTheDocument();
     expect(screen.getByText('Understanding VM lifecycle states')).toBeInTheDocument();
     expect(screen.getByText('Tekton Pipeline')).toBeInTheDocument();
+  });
+
+  it('mounts the Activity tab and its watches only when selected', () => {
+    render(
+      <MemoryRouter>
+        <DemosPage />
+      </MemoryRouter>,
+    );
+    expect(sdk.useK8sWatchResources).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('tab-activity'));
+    expect(sdk.useK8sWatchResources).toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('tab-catalog'));
+    const callsAfterLeavingActivity = sdk.useK8sWatchResources.mock.calls.length;
+    fireEvent.click(screen.getByTestId('tab-activity'));
+    expect(sdk.useK8sWatchResources.mock.calls.length).toBeGreaterThan(callsAfterLeavingActivity);
   });
 
   it('opens the page route', async () => {
@@ -185,11 +204,12 @@ describe('DemosPage', () => {
     );
     const search = screen.getByRole('textbox', { name: 'Search demos' });
     fireEvent.change(search, { target: { value: 'guided walkthrough' } });
-    expect(screen.getAllByTestId(/^card-(?!action)/)).toHaveLength(4);
+    expect(screen.getAllByTestId(/^card-(?!action)/)).toHaveLength(5);
     expect(screen.getByText('VM Instancetypes & Preferences')).toBeInTheDocument();
     expect(screen.getByText('Create a VM from the web console')).toBeInTheDocument();
     expect(screen.getByText('Create custom VM templates')).toBeInTheDocument();
     expect(screen.getByText('Cloning Virtual Machines')).toBeInTheDocument();
+    expect(screen.getByText('Cloud-init Fundamentals')).toBeInTheDocument();
     fireEvent.change(search, { target: { value: 'no matching demo' } });
     expect(screen.getByText('No demos match your filters')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('clear-filters'));

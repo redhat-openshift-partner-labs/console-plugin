@@ -1,0 +1,280 @@
+{{- if (index .Values.plugin.quickStarts "cloud-init-fundamentals").enabled }}
+apiVersion: console.openshift.io/v1
+kind: ConsoleQuickStart
+metadata:
+  name: cloud-init-fundamentals
+  labels:
+    {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
+spec:
+  displayName: "Cloud-init Fundamentals"
+  description: "Deliver first-boot configuration to a Fedora virtual machine with KubeVirt cloud-init."
+  durationMinutes: 25
+  tags:
+    - virtualization
+    - kubevirt
+    - cloud-init
+  prerequisites:
+    - "OpenShift 4.19+ with OpenShift Virtualization installed"
+    - "An authenticated oc and virtctl command line, and permission to create VMs, disks, and Secrets in a project"
+    - "A ready Fedora DataSource in openshift-virtualization-os-images"
+    - "A default StorageClass with at least 30Gi of available capacity"
+  introduction: |-
+    Configure a Fedora virtual machine with **cloud-init** and verify that the
+    guest consumed its first-boot configuration. You will use the active `oc`
+    project throughout this Quick Start.
+
+    You will:
+
+    - Confirm that the Fedora boot source is ready.
+    - Create a VM with inline NoCloud user data.
+    - Verify cloud-init from the guest console.
+    - Repeat the workflow with user data stored in a Kubernetes Secret.
+    - Remove the VM and temporary Secret.
+  tasks:
+    - title: "Check the Fedora boot source"
+      description: |-
+        1. Confirm the CLI is using the project where you want to create the
+           disposable VM:
+
+        `oc project`{{"{{execute}}"}}
+
+        2. List the Fedora DataSource and check its **Ready** condition:
+
+        `oc get datasource fedora -n openshift-virtualization-os-images -o yaml`{{"{{execute}}"}}
+
+        Do not continue until the DataSource is ready. If it is unavailable or
+        not ready, ask an administrator to check the image import in
+        `openshift-virtualization-os-images`.
+      review:
+        instructions: "Did you confirm the active project and a Ready Fedora DataSource?"
+        failedTaskHelp: "Run the two commands again. Check the DataSource conditions and ask an administrator to resolve an image import or permission problem before continuing."
+      summary:
+        success: "You confirmed the project and Fedora boot source."
+        failed: "Confirm a usable project and ready Fedora DataSource before creating the VM."
+
+    - title: "Create a VM with inline cloud-init data"
+      description: |-
+        Save this manifest as `cloud-init-demo.yaml` in the same environment as
+        your CLI. It creates a persistent 30Gi root disk from the Fedora
+        DataSource and attaches a temporary NoCloud disk. The `#cloud-config`
+        header is required.
+
+        ```
+        apiVersion: kubevirt.io/v1
+        kind: VirtualMachine
+        metadata:
+          name: cloud-init-demo
+          labels:
+            app.kubernetes.io/managed-by: partner-labs-console-plugin
+        spec:
+          runStrategy: Always
+          dataVolumeTemplates:
+            - apiVersion: cdi.kubevirt.io/v1beta1
+              kind: DataVolume
+              metadata:
+                name: cloud-init-demo-rootdisk
+                labels:
+                  app.kubernetes.io/managed-by: partner-labs-console-plugin
+              spec:
+                sourceRef:
+                  kind: DataSource
+                  name: fedora
+                  namespace: openshift-virtualization-os-images
+                storage:
+                  resources:
+                    requests:
+                      storage: 30Gi
+          template:
+            metadata:
+              labels:
+                kubevirt.io/domain: cloud-init-demo
+                app.kubernetes.io/managed-by: partner-labs-console-plugin
+            spec:
+              domain:
+                devices:
+                  disks:
+                    - name: rootdisk
+                      disk:
+                        bus: virtio
+                    - name: cloudinitdisk
+                      disk:
+                        bus: virtio
+                  interfaces:
+                    - name: default
+                      masquerade: {}
+                  rng: {}
+                resources:
+                  requests:
+                    memory: 2Gi
+              networks:
+                - name: default
+                  pod: {}
+              volumes:
+                - name: rootdisk
+                  dataVolume:
+                    name: cloud-init-demo-rootdisk
+                - name: cloudinitdisk
+                  cloudInitNoCloud:
+                    userData: |
+                      #cloud-config
+                      hostname: cloud-init-demo
+                      manage_etc_hosts: true
+                      users:
+                        - default
+                        - name: cloud-user
+                          lock_passwd: false
+                          plain_text_passwd: cloud-init-demo
+                      ssh_pwauth: false
+                      write_files:
+                        - path: /etc/motd.d/99-cloud-init-demo
+                          permissions: '0644'
+                          content: |
+                            Cloud-init configured this VM.
+                      runcmd:
+                        - [ sh, -c, "printf 'cloud-init ran successfully\\n' > /var/lib/cloud-init-demo-ready" ]
+        ```{{"{{copy}}"}}
+
+        Create the VM in your active project:
+
+        `oc apply -f cloud-init-demo.yaml`{{"{{execute}}"}}
+
+        The example password is only for console access to this disposable VM.
+        SSH password authentication is disabled, but the password is visible in
+        the VirtualMachine object and is not a Secret.
+      review:
+        instructions: "Did you save and apply the manifest with `runStrategy: Always`, a Fedora DataSource, and `cloudInitNoCloud.userData`?"
+        failedTaskHelp: >-
+          Check YAML indentation, the DataSource namespace, and the active project.
+          Run `oc describe vm cloud-init-demo`{{"{{execute}}"}} for validation events.
+      summary:
+        success: "You created a VM with inline cloud-init configuration."
+        failed: "Resolve the VM or DataVolume validation errors before continuing."
+
+    - title: "Verify cloud-init in the guest"
+      description: |-
+        1. Watch the VM and disk until the VM is **Running**:
+
+        `oc get vm,dv,vmi cloud-init-demo`{{"{{execute}}"}}
+
+        2. Open the serial console:
+
+        `virtctl console cloud-init-demo`{{"{{execute}}"}}
+
+        Log in as `cloud-user` with password `cloud-init-demo`. Press **Enter**
+        if the console is blank. Press **Ctrl+]** to exit `virtctl console`.
+
+        3. Run these commands inside the Fedora guest:
+
+        ```
+        cloud-init status --long
+        cat /var/lib/cloud-init-demo-ready
+        cat /etc/motd.d/99-cloud-init-demo
+        ```{{"{{copy}}"}}
+
+        A successful run reports `status: done`, prints
+        `cloud-init ran successfully`, and shows the custom MOTD. For additional
+        detail, inspect `/var/log/cloud-init.log` and
+        `/var/log/cloud-init-output.log` in the guest.
+      review:
+        instructions: "Did cloud-init report done, and did the marker file and MOTD contain the expected text?"
+        failedTaskHelp: "Wait for the VMI to reach Running, then reconnect to the console. If cloud-init is not done, inspect the two cloud-init logs and confirm the `#cloud-config` header."
+      summary:
+        success: "You verified that Fedora consumed the NoCloud configuration."
+        failed: "Inspect the VM state and cloud-init logs before continuing."
+
+    - title: "Use a Secret for userData"
+      description: |-
+        Inline user data is visible in the VirtualMachine object. Use a
+        Kubernetes Secret when you want the user data separated from the VM
+        manifest. This is an alternative to the inline workflow, so delete the
+        existing VM first and wait for its DataVolume to disappear.
+
+        1. Delete the inline VM:
+
+        `oc delete vm cloud-init-demo --ignore-not-found`{{"{{execute}}"}}
+
+        2. Save this file as `cloud-init-userdata.yaml`:
+
+        ```
+        #cloud-config
+        hostname: cloud-init-demo
+        manage_etc_hosts: true
+        users:
+          - default
+          - name: cloud-user
+            lock_passwd: false
+            plain_text_passwd: cloud-init-demo
+        ssh_pwauth: false
+        write_files:
+          - path: /etc/motd.d/99-cloud-init-demo
+            permissions: '0644'
+            content: |
+              Cloud-init configured this VM.
+        runcmd:
+          - [ sh, -c, "printf 'cloud-init ran successfully\\n' > /var/lib/cloud-init-demo-ready" ]
+        ```{{"{{copy}}"}}
+
+        3. Create the Secret. The key must be named `userdata`:
+
+        `oc create secret generic cloud-init-demo-userdata --from-file=userdata=cloud-init-userdata.yaml`{{"{{execute}}"}}
+
+        4. Create the VM again, replacing the inline `userData` volume with this
+           volume definition:
+
+        ```
+        volumes:
+          - name: rootdisk
+            dataVolume:
+              name: cloud-init-demo-rootdisk
+          - name: cloudinitdisk
+            cloudInitNoCloud:
+              secretRef:
+                name: cloud-init-demo-userdata
+        ```{{"{{copy}}"}}
+
+        Add this `volumes` block to the VM manifest from the previous task and
+        apply it again:
+
+        `oc apply -f cloud-init-demo.yaml`{{"{{execute}}"}}
+
+        OpenShift Virtualization 4.19 uses `cloudInitNoCloud.secretRef.name` for
+        this Secret reference. Kubernetes Secrets are base64-encoded, not
+        encrypted. Follow your cluster's Secret-management practices and remove
+        the local userdata file when you finish.
+      review:
+        instructions: "Did you create the `userdata` Secret and update the VM to use `cloudInitNoCloud.secretRef.name`?"
+        failedTaskHelp: "Check that the Secret exists in the active project, that its key is exactly `userdata`, and that the VM volume references `cloud-init-demo-userdata`."
+      summary:
+        success: "You configured cloud-init user data from a Secret."
+        failed: "Check the Secret key and VM volume reference before applying again."
+
+    - title: "Clean up the demo"
+      description: |-
+        Remove the disposable VM and Secret from the active project:
+
+        `oc delete vm cloud-init-demo --ignore-not-found`{{"{{execute}}"}}
+
+        `oc delete secret cloud-init-demo-userdata --ignore-not-found`{{"{{execute}}"}}
+
+        Verify that the VM, VMI, and DataVolume are gone:
+
+        `oc get vm,dv,vmi cloud-init-demo`{{"{{execute}}"}}
+
+        Delete the local `cloud-init-demo.yaml` and
+        `cloud-init-userdata.yaml` files when you finish. The VM's DataVolume is
+        owned by the VM and contains disposable demo data.
+      review:
+        instructions: "Did you remove the demo VM, Secret, and local userdata files?"
+        failedTaskHelp: "Run the cleanup commands again and check the active project. Wait for the DataVolume to be deleted before reusing the demo name."
+      summary:
+        success: "You cleaned up the cloud-init demo resources."
+        failed: "Confirm the demo resources and local files are removed."
+  conclusion: |-
+    You configured a Fedora VM with cloud-init NoCloud data, verified first-boot
+    behavior from the guest console, and used a Secret-backed alternative.
+
+    Cloud-init is intended for first-boot initialization. For production VMs,
+    use managed credentials, avoid embedding passwords in manifests, and apply
+    your organization's Secret-management policies.
+  nextQuickStart: []
+{{- end }}

@@ -1,0 +1,269 @@
+{{- if (index .Values.plugin.quickStarts "virtctl-basics").enabled }}
+apiVersion: console.openshift.io/v1
+kind: ConsoleQuickStart
+metadata:
+  name: virtctl-basics
+  labels:
+    {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
+spec:
+  displayName: "Using virtctl for VM management"
+  description: >-
+    Install virtctl and use it to inspect, start, stop, restart, access, and
+    troubleshoot virtual machines in OpenShift Virtualization.
+  durationMinutes: 20
+  tags:
+    - virtualization
+    - kubevirt
+    - virtctl
+  prerequisites:
+    - "OpenShift Container Platform 4.19 or later"
+    - "OpenShift Virtualization installed"
+    - "An existing VirtualMachine and permission to manage it"
+    - "Cluster access with oc login"
+    - "A QEMU guest agent installed for guestosinfo, fslist, and userlist"
+  introduction: |-
+    The `virtctl` command-line tool provides VM operations that complement the
+    `oc` command. Use `oc` to list and query Kubernetes resources, and use
+    `virtctl` to start, stop, restart, and access virtual machines.
+
+    This Quick Start uses `fedora-app-vm` in the `myapp` namespace as an example.
+    Replace that VM name and namespace with resources from your cluster before
+    running commands.
+
+    Commands that contain example VM names or require an interactive session are
+    shown for copying and must be adapted before use.
+  tasks:
+    - title: "Install virtctl"
+      description: |-
+        Download the client from the cluster's `ConsoleCLIDownload` resources.
+        This avoids depending on a particular web-console menu or link.
+
+        1. Confirm that you are logged into the target cluster:
+
+        `oc whoami`{{"{{execute}}"}}
+
+        2. List the CLI download resources and locate the entry whose display
+           name mentions **virtctl** or **KubeVirt**:
+
+        `oc get consoleclidownloads -o custom-columns=NAME:.metadata.name,DISPLAY_NAME:.spec.displayName`{{"{{execute}}"}}
+
+        3. Replace `<virtctl-download-name>` with the resource name you found
+           and list its platform-specific links:
+
+        `oc get consoleclidownload <virtctl-download-name> -o jsonpath='{range .spec.links[*]}{.text}{"\t"}{.href}{"\n"}{end}'`{{"{{copy}}"}}
+
+        4. In your local shell, set `VIRTCTL_URL` to the link matching your
+           operating system and architecture:
+
+        `export VIRTCTL_URL='https://replace-with-the-selected-virtctl-link'`{{"{{copy}}"}}
+
+        5. Download and extract the archive. Run these commands in the shell
+           where you want to install virtctl, not necessarily in the Web Terminal:
+
+        `curl -fL "$VIRTCTL_URL" -o virtctl.tar.gz`{{"{{copy}}"}}
+
+        `tar -xvf virtctl.tar.gz`{{"{{copy}}"}}
+
+        6. Make the binary executable, move it into your PATH, and verify it:
+
+        `chmod +x virtctl`{{"{{copy}}"}}
+
+        `sudo mv virtctl /usr/local/bin/`{{"{{copy}}"}}
+
+        `virtctl version --client`{{"{{copy}}"}}
+
+        On Windows, extract the archive and add the executable's directory to
+        `PATH` instead of using the Linux/macOS commands.
+
+        If no virtctl `ConsoleCLIDownload` resource exists, OpenShift
+        Virtualization may not be fully installed or ready. Check the
+        HyperConverged resource and ask a cluster administrator to complete the
+        installation before continuing.
+      review:
+        instructions: "Does virtctl version --client return the installed client version?"
+        failedTaskHelp: >-
+          Confirm that you selected the link for your operating system and
+          architecture, extracted the archive, moved the binary into your PATH,
+          and ran `virtctl version --client` from that same shell.
+      summary:
+        success: "virtctl is installed and available in your PATH."
+        failed: "Install virtctl and try the version command again."
+
+    - title: "List virtual machines and instances"
+      description: |-
+        Use `oc` to discover the virtual machines you can manage.
+
+        List VMs in the example namespace:
+
+        `oc get vm -n myapp`{{"{{copy}}"}}
+
+        List VMs in every namespace:
+
+        `oc get vm -A`{{"{{execute}}"}}
+
+        List running VM instances and their node and IP information:
+
+        `oc get vmi -A`{{"{{execute}}"}}
+
+        Select a VM and namespace for the remaining tasks. Replace
+        `fedora-app-vm` and `myapp` in each example if your resources have
+        different names.
+      review:
+        instructions: "Can you identify a VM and its namespace to manage?"
+        failedTaskHelp: >-
+          Check your current permissions with `oc whoami` and list all VMs with
+          `oc get vm -A`.
+      summary:
+        success: "You identified a VM and namespace for virtctl operations."
+        failed: "Find an existing VM before continuing."
+
+    - title: "Manage the VM lifecycle"
+      description: |-
+        Use virtctl to start, stop, and restart the selected VM.
+
+        Replace `fedora-app-vm` and `myapp` before running these commands:
+
+        `virtctl start fedora-app-vm -n myapp`{{"{{copy}}"}}
+
+        `virtctl stop fedora-app-vm -n myapp`{{"{{copy}}"}}
+
+        `virtctl restart fedora-app-vm -n myapp`{{"{{copy}}"}}
+
+        Use `oc` to confirm the resulting VM state after each operation:
+
+        `oc get vm fedora-app-vm -n myapp`{{"{{copy}}"}}
+      review:
+        instructions: >-
+          Did the VM transition through the requested lifecycle state, and does
+          `oc get vm` show the expected status?
+        failedTaskHelp: >-
+          Confirm the VM name and namespace. Inspect events with
+          `oc describe vm fedora-app-vm -n myapp`.
+      summary:
+        success: "You managed the VM lifecycle with virtctl."
+        failed: "The VM did not reach the expected state."
+
+    - title: "Access the VM"
+      description: |-
+        virtctl provides several ways to access a VM. Replace the example VM
+        name and namespace before copying a command.
+
+        Open a text console. Press **Ctrl+]** to exit:
+
+        `virtctl console fedora-app-vm -n myapp`{{"{{copy}}"}}
+
+        Connect over SSH when SSH is configured:
+
+        `virtctl ssh user@fedora-app-vm -n myapp`{{"{{copy}}"}}
+
+        Open a VNC session:
+
+        `virtctl vnc fedora-app-vm -n myapp`{{"{{copy}}"}}
+
+        These commands are intentionally not executable from the walkthrough
+        because console and VNC sessions are interactive.
+      review:
+        instructions: >-
+          Can you access the VM using at least one method appropriate for its
+          configuration?
+        failedTaskHelp: >-
+          Use `oc get vmi -n myapp` to confirm the VM is running. SSH requires
+          an SSH server and credentials; console access requires a configured
+          serial console.
+      summary:
+        success: "You reviewed the available VM access methods."
+        failed: "Verify the VM state and access configuration."
+
+    - title: "Inspect guest information"
+      description: |-
+        The following commands require a QEMU guest agent running inside the VM.
+
+        Get operating system information:
+
+        `virtctl guestosinfo fedora-app-vm -n myapp`{{"{{copy}}"}}
+
+        List mounted filesystems:
+
+        `virtctl fslist fedora-app-vm -n myapp`{{"{{copy}}"}}
+
+        List logged-in users:
+
+        `virtctl userlist fedora-app-vm -n myapp`{{"{{copy}}"}}
+
+        If these commands return no data, install and start the QEMU guest agent
+        in the guest operating system.
+      review:
+        instructions: "Did the guest agent return operating system or filesystem information?"
+        failedTaskHelp: >-
+          Confirm that the VM is running and that the QEMU guest agent is
+          installed and active inside the guest.
+      summary:
+        success: "You queried guest information through virtctl."
+        failed: "The guest agent did not return information."
+
+    - title: "Transfer a file with virtctl scp"
+      description: |-
+        Use `virtctl scp` to copy files between your workstation and the VM.
+        SSH must be running in the VM, and your key or password must be
+        configured.
+
+        Copy a local file to the VM:
+
+        `virtctl scp local-file.txt fedora@fedora-app-vm:/tmp/remote.txt -n myapp`{{"{{copy}}"}}
+
+        Copy a file from the VM:
+
+        `virtctl scp fedora@fedora-app-vm:/tmp/remote.txt ./local.txt -n myapp`{{"{{copy}}"}}
+
+        Specify a different SSH key:
+
+        `virtctl scp -i ~/.ssh/my_key local-file.txt fedora@fedora-app-vm:/tmp/ -n myapp`{{"{{copy}}"}}
+
+        Replace the filenames, username, VM name, namespace, and key path with
+        values from your environment. If SSH is not configured, use the console
+        to configure it first.
+      review:
+        instructions: "Did the file transfer complete successfully?"
+        failedTaskHelp: >-
+          Verify that SSH is running, the VM user exists, and your public key is
+          authorized in the guest.
+      summary:
+        success: "You transferred a file with virtctl scp."
+        failed: "The file transfer did not complete."
+
+    - title: "Verify operations and troubleshoot"
+      description: |-
+        Verify the VM and VMI state after using virtctl:
+
+        `oc get vm fedora-app-vm -n myapp`{{"{{copy}}"}}
+
+        `oc get vmi fedora-app-vm -n myapp`{{"{{copy}}"}}
+
+        If the CLI cannot connect to the cluster, confirm your login:
+
+        `oc whoami`{{"{{execute}}"}}
+
+        `oc get nodes`{{"{{execute}}"}}
+
+        If a console session hangs, press **Ctrl+]** to exit and check the VMI
+        status. If guest-agent commands return no data, install the QEMU guest
+        agent. If SSH or SCP fails, verify that SSH is configured in the VM.
+      review:
+        instructions: >-
+          Does the VM show the expected state, and can you identify the cause of
+          any access or guest-agent issue?
+        failedTaskHelp: >-
+          Review the VM and VMI status, then check the relevant guest console,
+          SSH, or QEMU guest-agent configuration.
+      summary:
+        success: "You verified virtctl operations and reviewed troubleshooting steps."
+        failed: "Review the VM state and connection configuration."
+  conclusion: |-
+    Congratulations! You installed virtctl and used it to discover and manage
+    virtual machines, access guests, inspect guest-agent information, transfer
+    files, and verify VM operations.
+
+    Use `oc` for Kubernetes resource status and `virtctl` for VM-specific
+    operations. Always specify the namespace when managing a VM.
+  nextQuickStart: []
+{{- end }}

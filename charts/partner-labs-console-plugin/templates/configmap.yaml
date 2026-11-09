@@ -14,11 +14,40 @@ data:
       include            /etc/nginx/mime.types;
       default_type       application/octet-stream;
       keepalive_timeout  65;
+      server_tokens      off;
+
+      gzip              on;
+      gzip_vary         on;
+      gzip_proxied      any;
+      gzip_min_length   1024;
+      gzip_comp_level   5;
+      gzip_types        application/javascript text/javascript text/css application/json image/svg+xml;
+
       server {
         listen              {{ .Values.plugin.port }} ssl;
         listen              [::]:{{ .Values.plugin.port }} ssl;
         ssl_certificate     /var/cert/tls.crt;
         ssl_certificate_key /var/cert/tls.key;
+        ssl_protocols       TLSv1.2 TLSv1.3;
+        ssl_prefer_server_ciphers on;
+        ssl_session_cache   shared:SSL:10m;
+        ssl_session_timeout 10m;
         root                /usr/share/nginx/html;
+
+        # Only nosniff is applicable here, no need for document policies because
+        # this server does not send HTML documents.
+        add_header X-Content-Type-Options "nosniff" always;
+
+        # Production bundle names contain a content hash, so we can cache them for
+        # a long time.
+        location ~* \.(?:js|css|woff2?|ttf|eot|otf|svg|png|jpe?g|gif)$ {
+          expires 1y;
+        }
+
+        # Manifest and locale files are not content hashed and change on upgrade,
+        # so the browser must revalidate them.
+        location ~ /(?:plugin-manifest\.json|locales/.+\.json)$ {
+          expires -1;
+        }
       }
     }

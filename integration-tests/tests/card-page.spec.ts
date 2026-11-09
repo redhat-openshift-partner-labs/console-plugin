@@ -128,6 +128,15 @@ test.describe('Console plugin cards', () => {
     await expect(page.getByText('Open OperatorHub', { exact: true })).toBeVisible();
   });
 
+  test('opens the Windows golden images quick start', async ({ page }) => {
+    await page.goto('/partner-labs-demos');
+    await page.getByTestId('card-action-windows-golden-images').click();
+    await expect(
+      page.getByRole('heading', { name: 'Create Windows golden images', exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText('Prepare a dedicated project', { exact: true })).toBeVisible();
+  });
+
   test('opens the VM ingress routes quick start', async ({ page }) => {
     await page.goto('/partner-labs-demos');
     await page.getByTestId('card-action-vm-ingress-routes').click();
@@ -157,6 +166,58 @@ test.describe('Console plugin cards', () => {
     ).toBeVisible();
   });
 
+  test('opens the VM network policies quick start', async ({ page }) => {
+    await page.goto('/partner-labs-demos');
+    await page.getByTestId('card-action-network-policies-vms').click();
+    await expect(
+      page.getByRole('heading', { name: 'VM Cookbook: Network Policies for VMs', exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText('Create the demo project and clients', { exact: true }),
+    ).toBeVisible();
+  });
+
+  test('opens the static IP configuration quick start', async ({ page }) => {
+    await page.goto('/partner-labs-demos');
+    await page.getByTestId('card-action-static-ip-configuration').click();
+    await expect(
+      page.getByRole('heading', { name: 'VM Cookbook: Static IP Configuration', exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText('Create a dedicated test project', { exact: true })).toBeVisible();
+  });
+
+  test('opens the LVM Storage Operator quick start', async ({ page }) => {
+    await page.goto('/partner-labs-demos');
+    await page.getByTestId('card-action-install-lvm-storage-operator').click();
+    await expect(
+      page.getByRole('heading', {
+        name: 'Install the LVM Storage Operator',
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(page.getByText('Identify a spare disk', { exact: true })).toBeVisible();
+  });
+
+  test('opens the CLI YAML VM quick start', async ({ page }) => {
+    await page.goto('/partner-labs-demos');
+    await page.getByTestId('card-action-create-vm-cli-yaml').click();
+    await expect(
+      page.getByRole('heading', { name: 'Create a VM with CLI YAML', exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText('Create a project and verify the boot source', { exact: true }),
+    ).toBeVisible();
+  });
+
+  test('opens the virtctl basics quick start', async ({ page }) => {
+    await page.goto('/partner-labs-demos');
+    await page.getByTestId('card-action-virtctl-basics').click();
+    await expect(
+      page.getByRole('heading', { name: 'Using virtctl for VM management', exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText('Install virtctl', { exact: true })).toBeVisible();
+  });
+
   test('opens the custom VM templates quick start', async ({ page }) => {
     await page.goto('/partner-labs-demos');
     await page.getByTestId('card-action-vm-templates').click();
@@ -164,5 +225,14 @@ test.describe('Console plugin cards', () => {
       page.getByRole('heading', { name: 'Create custom VM templates', exact: true }),
     ).toBeVisible();
     await expect(page.getByText('Inspect a supplied VM template', { exact: true })).toBeVisible();
+  });
+
+  test('opens the Cloud-init Fundamentals quick start', async ({ page }) => {
+    await page.goto('/partner-labs-demos');
+    await page.getByTestId('card-action-cloud-init-fundamentals').click();
+    await expect(
+      page.getByRole('heading', { name: 'Cloud-init Fundamentals', exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText('Check the Fedora boot source')).toBeVisible();
   });
 });

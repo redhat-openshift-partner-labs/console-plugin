@@ -35,21 +35,35 @@ plugin:
     annotations: {}
     name: ""
   quickStarts:
+    windows-golden-images:
+      enabled: true
     windows-vm-virtio-drivers:
+      enabled: true
+    network-policies-vms:
+      enabled: true
+    virtctl-basics:
       enabled: true
     vm-ingress-routes:
       enabled: true
+    static-ip-configuration:
+      enabled: true
     install-configure-ocpv-operator:
+      enabled: true
+    install-lvm-storage-operator:
       enabled: true
     vm-templates:
       enabled: true
     create-vm-web-console:
+      enabled: true
+    create-vm-cli-yaml:
       enabled: true
     vm-instancetypes-and-preferences:
       enabled: true
     vm-lifecycle-states:
       enabled: true
     cloning-vms:
+      enabled: true
+    cloud-init-fundamentals:
       enabled: true
   jobs:
     patchConsoles:

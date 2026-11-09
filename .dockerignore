@@ -1,0 +1,43 @@
+# Version control and editor files
+.git
+.github
+.gitignore
+.vscode
+.idea
+.devcontainer
+
+# CI and local tooling that the image build does not use
+.ci-operator.yaml
+ct.yaml
+charts
+scripts
+integration-tests
+install_helm.sh
+start-console.sh
+test-frontend.sh
+test-prow-e2e.sh
+AGENTS.md
+CLAUDE.md
+*.md
+
+# Build output, dependencies, and test artifacts
+node_modules
+**/node_modules
+dist
+**/dist
+coverage
+playwright-report
+test-results
+integration-tests/results
+jest-junit.xml
+
+# Yarn cache and local install state, except .yarn/releases
+.yarn/*
+!.yarn/releases
+
+# Secrets and machine-specific files
+.devcontainer/dev.env
+**/dev.env
+.env
+.env.*
+.DS_Store

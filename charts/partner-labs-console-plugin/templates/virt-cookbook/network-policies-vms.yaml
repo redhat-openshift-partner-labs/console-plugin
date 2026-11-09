@@ -1,0 +1,354 @@
+{{- if (index .Values.plugin.quickStarts "network-policies-vms").enabled }}
+apiVersion: console.openshift.io/v1
+kind: ConsoleQuickStart
+metadata:
+  name: network-policies-vms
+  labels:
+    {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
+spec:
+  displayName: "VM Cookbook: Network Policies for VMs"
+  description: "Control access to a VM with NetworkPolicy: verify connectivity, deny ingress, and allow HTTP from a labeled client."
+  durationMinutes: 15
+  tags:
+    - virtualization
+    - networking
+    - security
+  prerequisites:
+    - "OpenShift Virtualization installed on a cluster using OVN-Kubernetes"
+    - "Capacity for one VM with 1 vCPU and 2 GiB of memory, plus two small test pods"
+    - "Permission to create projects, VirtualMachines, pods, and NetworkPolicies, execute commands in pods, and delete the demo resources"
+    - "An authenticated oc CLI and Bash; Run controls require the Web Terminal Operator"
+    - "Cluster access to quay.io/containerdisks/fedora:latest and registry.access.redhat.com/ubi9/ubi:latest; guest access to Fedora package repositories"
+  introduction: |-
+    Apply a NetworkPolicy to a VM on the primary pod network. Start with two
+    clients that can reach the VM, deny incoming connections, then allow HTTP
+    from only one labeled client.
+
+    Policies select the VM's launcher pod through labels in
+    `spec.template.metadata.labels`. Labels on the VM resource alone do not
+    select the launcher pod.
+
+    These policies do not govern secondary network interfaces.
+  tasks:
+    - title: "Create the demo project and clients"
+      description: |-
+        Create a dedicated project:
+
+        `oc new-project vm-netpol-demo`{{"{{execute}}"}}
+
+        If the test client pods already exist from an earlier run, delete
+        them before running the creation commands again:
+
+        ```
+        oc delete pod allowed-client blocked-client -n vm-netpol-demo --ignore-not-found --wait=true
+        ```{{"{{execute}}"}}
+
+        Create the `allowed-client` test pod with the label `access=allowed`:
+
+        ```
+        oc run allowed-client -n vm-netpol-demo --image=registry.access.redhat.com/ubi9/ubi:latest --labels=access=allowed --restart=Never --command -- sleep 7200
+        ```{{"{{execute}}"}}
+
+        Create the `blocked-client` test pod with the label `access=blocked`:
+
+        ```
+        oc run blocked-client -n vm-netpol-demo --image=registry.access.redhat.com/ubi9/ubi:latest --labels=access=blocked --restart=Never --command -- sleep 7200
+        ```{{"{{execute}}"}}
+
+        Wait for both test client pods to become ready:
+
+        ```
+        oc wait -n vm-netpol-demo pod/allowed-client pod/blocked-client --for=condition=Ready --timeout=180s
+        ```{{"{{execute}}"}}
+
+        Expect `condition met` for both clients. Their labels will determine
+        which client can access the VM after the allow policy is applied.
+      review:
+        instructions: "Are both client pods ready in vm-netpol-demo?"
+        failedTaskHelp: "Check project creation permissions and pod events for image pull or scheduling errors."
+      summary:
+        success: "Both test clients are ready."
+        failed: "Resolve client startup errors before continuing."
+
+    - title: "Start a web server in a VM"
+      description: |-
+        Create a Fedora VM. Cloud-init installs Nginx and writes a demo page.
+        The disk is temporary and requires no StorageClass.
+
+        ```
+        oc create -n vm-netpol-demo -f - <<'YAML'
+        apiVersion: kubevirt.io/v1
+        kind: VirtualMachine
+        metadata:
+          name: web-vm
+        spec:
+          runStrategy: Always
+          template:
+            metadata:
+              labels:
+                app: netpol-web
+            spec:
+              domain:
+                cpu:
+                  cores: 1
+                memory:
+                  guest: 2Gi
+                devices:
+                  disks:
+                    - name: rootdisk
+                      disk:
+                        bus: virtio
+                    - name: cloudinitdisk
+                      disk:
+                        bus: virtio
+                  interfaces:
+                    - name: default
+                      masquerade: {}
+                      ports:
+                        - port: 80
+              networks:
+                - name: default
+                  pod: {}
+              volumes:
+                - name: rootdisk
+                  containerDisk:
+                    image: quay.io/containerdisks/fedora:latest
+                - name: cloudinitdisk
+                  cloudInitNoCloud:
+                    userData: |-
+                      #cloud-config
+                      runcmd:
+                        - dnf install -y nginx
+                        - 'echo "Hello from the protected VM" > /usr/share/nginx/html/index.html'
+                        - systemctl enable --now nginx
+        YAML
+        ```{{"{{execute}}"}}
+
+        `oc wait -n vm-netpol-demo vm/web-vm --for=condition=Ready --timeout=300s`{{"{{execute}}"}}
+
+        Verify the launcher pod has the policy label:
+
+        `oc get pods -n vm-netpol-demo -l app=netpol-web --show-labels`{{"{{execute}}"}}
+
+        Expect a running launcher pod with `app=netpol-web`.
+      review:
+        instructions: "Is the VM ready, and does its launcher pod have app=netpol-web?"
+        failedTaskHelp: "Inspect oc describe vm web-vm -n vm-netpol-demo and launcher pod events; confirm labels are under spec.template.metadata.labels."
+      summary:
+        success: "The web VM is running with the label used by the policies."
+        failed: "Resolve VM startup or labeling errors before continuing."
+
+    - title: "Verify both clients can reach the VM"
+      description: |-
+        Retrieve the launcher pod's IPv4 address and test HTTP from both
+        clients. First, retrieve the VM's address:
+
+        ```
+        VM_IP=$(oc get pod -n vm-netpol-demo -l app=netpol-web -o jsonpath='{.items[0].status.podIP}')
+        echo "$VM_IP"
+        ```{{"{{execute}}"}}
+
+        In the same Bash terminal, test `allowed-client`. It may take some
+        time for cloud-init to install Nginx and initialize the demo page.
+        Expect **Hello from the protected VM**:
+
+        ```
+        oc exec -n vm-netpol-demo allowed-client -- curl --noproxy '*' --fail --silent --show-error --retry 30 --retry-delay 5 --retry-all-errors --connect-timeout 3 --max-time 5 "http://${VM_IP}:80"
+        ```{{"{{execute}}"}}
+
+        Test `blocked-client`. Expect the same greeting:
+
+        ```
+        oc exec -n vm-netpol-demo blocked-client -- curl --noproxy '*' --fail --silent --show-error --retry 30 --retry-delay 5 --retry-all-errors --connect-timeout 3 --max-time 5 "http://${VM_IP}:80"
+        ```{{"{{execute}}"}}
+
+        If either request fails, check guest package repository access and
+        existing project or administrative network policies before adding
+        the demo policies.
+      review:
+        instructions: "Did both clients receive Hello from the protected VM?"
+        failedTaskHelp: "Check the launcher pod IP, VM startup, Nginx installation, and existing policies. Do not treat a failed baseline as proof of policy enforcement."
+      summary:
+        success: "Both clients can reach the VM before isolation."
+        failed: "Establish baseline connectivity before applying the deny policy."
+
+    - title: "Deny incoming connections to the VM"
+      description: |-
+        Apply an ingress policy that selects the VM's launcher pod and allows
+        no incoming connections:
+
+        ```
+        oc create -n vm-netpol-demo -f - <<'YAML'
+        apiVersion: networking.k8s.io/v1
+        kind: NetworkPolicy
+        metadata:
+          name: deny-web-ingress
+        spec:
+          podSelector:
+            matchLabels:
+              app: netpol-web
+          policyTypes:
+            - Ingress
+          ingress: []
+        YAML
+        ```{{"{{execute}}"}}
+
+        Verify that the `deny-web-ingress` NetworkPolicy exists:
+
+        ```
+        oc get networkpolicy deny-web-ingress -n vm-netpol-demo
+        ```{{"{{execute}}"}}
+
+        Expect `deny-web-ingress` with the pod selector `app=netpol-web`.
+
+        Retrieve the VM's address:
+
+        ```
+        VM_IP=$(oc get pod -n vm-netpol-demo -l app=netpol-web -o jsonpath='{.items[0].status.podIP}')
+        echo "$VM_IP"
+        ```{{"{{execute}}"}}
+
+        In the same Bash terminal, test a new connection from `allowed-client`.
+
+        Expect curl exit code `28`, indicating a timeout:
+
+        ```
+        oc exec -n vm-netpol-demo allowed-client -- curl --noproxy '*' --fail --silent --show-error --connect-timeout 3 --max-time 5 "http://${VM_IP}:80"
+        RESULT=$?
+        echo "curl exit code: $RESULT"
+        ```{{"{{execute}}"}}
+
+        Test a new connection from `blocked-client`. Expect timeout code `28`
+        for this request too:
+
+        ```
+        oc exec -n vm-netpol-demo blocked-client -- curl --noproxy '*' --fail --silent --show-error --connect-timeout 3 --max-time 5 "http://${VM_IP}:80"
+        RESULT=$?
+        echo "curl exit code: $RESULT"
+        ```{{"{{execute}}"}}
+
+        Policy changes can take a few seconds to take effect. Repeat the test
+        if needed. A different error, such as connection refused, does not
+        demonstrate a policy drop.
+
+        This policy isolates ingress to the VM only. It leaves egress and
+        the client pods unchanged.
+
+        Policies are additive: another matching allow policy can permit
+        traffic even while this policy exists.
+      review:
+        instructions: "Did new HTTP connections from both clients time out with exit code 28?"
+        failedTaskHelp: "Check oc get networkpolicy -n vm-netpol-demo and launcher pod labels. Look for other matching policies that allow ingress."
+      summary:
+        success: "Incoming HTTP connections from both clients are blocked."
+        failed: "Verify both timeouts before adding the allow policy."
+
+    - title: "Allow HTTP from the labeled client"
+      description: |-
+        Add a policy allowing TCP port 80 from pods labeled `access=allowed`
+        in the same project:
+
+        ```
+        oc create -n vm-netpol-demo -f - <<'YAML'
+        apiVersion: networking.k8s.io/v1
+        kind: NetworkPolicy
+        metadata:
+          name: allow-http-from-client
+        spec:
+          podSelector:
+            matchLabels:
+              app: netpol-web
+          policyTypes:
+            - Ingress
+          ingress:
+            - from:
+                - podSelector:
+                    matchLabels:
+                      access: allowed
+              ports:
+                - protocol: TCP
+                  port: 80
+        YAML
+        ```{{"{{execute}}"}}
+
+        Retrieve the VM's address:
+
+        ```
+        VM_IP=$(oc get pod -n vm-netpol-demo -l app=netpol-web -o jsonpath='{.items[0].status.podIP}')
+        echo "$VM_IP"
+        ```{{"{{execute}}"}}
+
+        In the same Bash terminal, test `allowed-client`. Expect
+        **Hello from the protected VM**:
+
+        ```
+        oc exec -n vm-netpol-demo allowed-client -- curl --noproxy '*' --fail --silent --show-error --connect-timeout 3 --max-time 5 "http://${VM_IP}:80"
+        ```{{"{{execute}}"}}
+
+        Test `blocked-client`. Expect curl exit code `28`, indicating a timeout:
+
+        ```
+        oc exec -n vm-netpol-demo blocked-client -- curl --noproxy '*' --fail --silent --show-error --connect-timeout 3 --max-time 5 "http://${VM_IP}:80"
+        RESULT=$?
+        echo "blocked-client curl exit code: $RESULT"
+        ```{{"{{execute}}"}}
+
+        Expect the greeting from `allowed-client` and timeout code `28` from
+        `blocked-client`.
+
+        Repeat after a few seconds if policy updates are still propagating.
+        Keep the deny policy installed; the new policy adds only the specific
+        permitted traffic.
+
+        Review the policies and their selectors:
+
+        `oc get networkpolicy -n vm-netpol-demo`{{"{{execute}}"}}
+
+        A source `podSelector` without a `namespaceSelector` matches only
+        pods in the policy's namespace. This does not expose the VM through
+        a Route or an external load balancer.
+      review:
+        instructions: "Does allowed-client receive the greeting while blocked-client still times out?"
+        failedTaskHelp: "Check both client labels, the VM's app label, and the allow policy's source selector and TCP port."
+      summary:
+        success: "Only the labeled client can reach the VM on TCP port 80."
+        failed: "Resolve the selector or connectivity mismatch before continuing."
+
+    - title: "Clean up the demo resources"
+      description: |-
+        Delete the VM, clients, and policies created by this demo:
+
+        ```
+        oc delete vm web-vm -n vm-netpol-demo --wait=true
+        oc delete pod allowed-client blocked-client -n vm-netpol-demo --wait=true
+        oc delete networkpolicy deny-web-ingress allow-http-from-client -n vm-netpol-demo
+        ```{{"{{execute}}"}}
+
+        Confirm that the demo resources are gone. If the launcher pod is
+        still terminating, wait and repeat:
+
+        `oc get vm,vmi,pod,networkpolicy -n vm-netpol-demo -o name`{{"{{execute}}"}}
+
+        Expect no output and no errors. Remove the dedicated project:
+
+        `oc delete project vm-netpol-demo`{{"{{execute}}"}}
+      review:
+        instructions: "Are the VM, client pods, policies, and demo project removed?"
+        failedTaskHelp: "Check deletion permissions and wait for the launcher pod to terminate."
+      summary:
+        success: "The demo resources are removed."
+        failed: "Finish deleting the demo resources."
+  conclusion: |-
+    You selected a VM through its launcher pod labels, blocked incoming
+    connections, and restored HTTP access for one labeled client.
+
+    NetworkPolicy rules are additive and apply to the primary pod network.
+    Egress isolation requires separate rules, including allowances for needed
+    services such as DNS. Cluster administrators can use administrative
+    network policies for broader guardrails.
+
+    For more information, see Red Hat's
+    [Creating a network policy](https://docs.redhat.com/en/documentation/openshift_container_platform/4.22/html-single/network_security/index#nw-networkpolicy-create-cli_creating-network-policy)
+    documentation.
+  nextQuickStart: []
+{{- end }}
