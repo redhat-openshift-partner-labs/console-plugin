@@ -102,6 +102,12 @@
   body: Follow a guided walkthrough to deliver first-boot configuration to a Fedora virtual machine with KubeVirt cloud-init NoCloud.
   quickStartId: cloud-init-fundamentals
 
+- id: vm-export-import
+  kind: quickstart
+  title: Exporting and Importing VMs for Cross-Cluster Mobility
+  body: Export a VM disk to a registry, import it on another cluster, and recreate the VM.
+  quickStartId: vm-export-import
+
 - id: pipeline
   kind: pipeline
   title: Tekton Pipeline

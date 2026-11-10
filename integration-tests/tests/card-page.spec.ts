@@ -224,4 +224,36 @@ test.describe('Console plugin cards', () => {
     ).toBeVisible();
     await expect(page.getByText('Check the Fedora boot source')).toBeVisible();
   });
+
+  test('opens the VM export and import walkthrough', async ({ page }) => {
+    await page.goto('/partner-labs-demos');
+    await page.getByTestId('card-action-vm-export-import').click();
+    await expect(page).toHaveURL((url) => url.pathname === '/partner-labs-demos');
+    await expect(
+      page.getByRole('heading', {
+        name: 'Exporting and Importing VMs for Cross-Cluster Mobility',
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: 'OpenShift Virtualization cookbook', exact: true }),
+    ).toHaveAttribute(
+      'href',
+      'https://redhatquickcourses.github.io/ocp-virt-cookbook/ocp-virt-cookbook/1/vm-lifecycle/vm-export-import.html',
+    );
+    await expect(
+      page.getByText('Prepare the source and target projects', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText('Export the disk to a container registry', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText('Import the disk on the target cluster', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText('Download disks and manifests for offline use (optional CLI)', {
+        exact: true,
+      }),
+    ).toBeVisible();
+  });
 });
