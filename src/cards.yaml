@@ -102,6 +102,12 @@
   body: Follow a guided walkthrough to deliver first-boot configuration to a Fedora virtual machine with KubeVirt cloud-init NoCloud.
   quickStartId: cloud-init-fundamentals
 
+- id: vm-monitoring-metrics
+  kind: quickstart
+  title: Monitor VM performance and metrics
+  body: Create a Fedora VM, inspect its built-in charts, and query KubeVirt performance and lifecycle metrics with PromQL.
+  quickStartId: vm-monitoring-metrics
+
 - id: pipeline
   kind: pipeline
   title: Tekton Pipeline
