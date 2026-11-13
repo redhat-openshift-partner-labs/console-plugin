@@ -1,0 +1,288 @@
+{{- if (index .Values.plugin.quickStarts "multi-disk-configuration").enabled }}
+apiVersion: console.openshift.io/v1
+kind: ConsoleQuickStart
+metadata:
+  name: multi-disk-configuration
+  labels:
+    {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
+spec:
+  displayName: "Configure multiple VM disks"
+  description: >-
+    Create a virtual machine with a boot disk and a separate data disk, verify
+    their storage classes, and format and mount the data disk inside the guest.
+  durationMinutes: 25
+  tags:
+    - virtualization
+    - storage
+    - disks
+  prerequisites:
+    - "OpenShift Container Platform 4.19 or later"
+    - "OpenShift Virtualization installed and available"
+    - "Cluster access with oc login and virtctl installed"
+    - "Permission to create VirtualMachines, DataVolumes, and PVCs"
+    - "A Fedora DataSource in openshift-virtualization-os-images"
+    - "A default StorageClass configured"
+  introduction: |-
+    A VM can use multiple disks for different purposes. The boot disk stores the
+    operating system, while a separate data disk can store application data,
+    logs, or database files.
+
+    In this Quick Start you will create a VM with a 30 GiB boot disk and a 10 GiB
+    blank data disk. Both disks use the cluster's default StorageClass so this
+    workflow works on AWS without requiring special hardware or an LVM-specific
+    provisioner. If your cluster has a second compatible StorageClass, you can
+    use it for the data disk to demonstrate storage tiering.
+
+    The disk name in `spec.template.spec.domain.devices.disks` must match the
+    corresponding volume name in `spec.template.spec.volumes`. DataVolume
+    templates provide the PVC-backed storage for the boot and data disks.
+  tasks:
+    - title: "Choose the StorageClass and create a project"
+      description: |-
+        Create a project for the VM and identify the default StorageClass.
+
+        `oc new-project multi-disk-demo`{{"{{execute}}"}}
+
+        `oc get storageclass`{{"{{execute}}"}}
+
+        Use the StorageClass marked `(default)` for both disks in the example
+        manifest. If you have a second existing StorageClass and want to model
+        storage tiering, replace the data disk's `storageClassName` with that
+        existing class. Do not create an AWS StorageClass by copying an LVM
+        provisioner such as `topolvm.io`.
+      review:
+        instructions: >-
+          Does the `multi-disk-demo` project exist, and did you identify a
+          default StorageClass?
+        failedTaskHelp: >-
+          Create the project and inspect `oc get storageclass`. Ask a cluster
+          administrator if no default StorageClass is configured.
+      summary:
+        success: "You selected a project and StorageClass for the VM disks."
+        failed: "A project and default StorageClass are required."
+
+    - title: "Create a VM with boot and data disks"
+      description: |-
+        Save the following manifest as `multi-disk-vm.yaml`.
+
+        Replace `CHANGE_ME_DEFAULT_STORAGE_CLASS` with the default StorageClass
+        from the previous task. If you are not using a second storage tier,
+        replace `CHANGE_ME_DATA_STORAGE_CLASS` with the same default StorageClass.
+        To use a second existing StorageClass, replace only the data disk value
+        with that existing class.
+
+        The cloud-init password is for demonstration only. Use SSH keys and a
+        strong credential in production.
+
+        ```
+        apiVersion: kubevirt.io/v1
+        kind: VirtualMachine
+        metadata:
+          name: multi-disk-vm
+          namespace: multi-disk-demo
+        spec:
+          runStrategy: Always
+          template:
+            metadata:
+              labels:
+                kubevirt.io/domain: multi-disk-vm
+            spec:
+              domain:
+                cpu:
+                  cores: 1
+                resources:
+                  requests:
+                    memory: 2Gi
+                devices:
+                  disks:
+                    - name: rootdisk
+                      disk:
+                        bus: virtio
+                    - name: datadisk
+                      disk:
+                        bus: virtio
+                    - name: cloudinitdisk
+                      disk:
+                        bus: virtio
+                  interfaces:
+                    - name: default
+                      masquerade: {}
+              networks:
+                - name: default
+                  pod: {}
+              volumes:
+                - name: rootdisk
+                  dataVolume:
+                    name: multi-disk-rootdisk
+                - name: datadisk
+                  dataVolume:
+                    name: multi-disk-datadisk
+                - name: cloudinitdisk
+                  cloudInitNoCloud:
+                    userData: |
+                      #cloud-config
+                      user: fedora
+                      password: changeme
+                      chpasswd:
+                        expire: false
+                      ssh_pwauth: true
+          dataVolumeTemplates:
+            - metadata:
+                name: multi-disk-rootdisk
+              spec:
+                sourceRef:
+                  kind: DataSource
+                  name: fedora
+                  namespace: openshift-virtualization-os-images
+                storage:
+                  accessModes:
+                    - ReadWriteOnce
+                  resources:
+                    requests:
+                      storage: 30Gi
+                  storageClassName: CHANGE_ME_DEFAULT_STORAGE_CLASS
+            - metadata:
+                name: multi-disk-datadisk
+              spec:
+                source:
+                  blank: {}
+                storage:
+                  accessModes:
+                    - ReadWriteOnce
+                  resources:
+                    requests:
+                      storage: 10Gi
+                  storageClassName: CHANGE_ME_DATA_STORAGE_CLASS
+        ```{{"{{copy}}"}}
+
+        Apply the manifest after replacing both placeholders:
+
+        `oc apply -f multi-disk-vm.yaml`{{"{{execute}}"}}
+      review:
+        instructions: >-
+          Was `multi-disk-vm` created with `rootdisk`, `datadisk`, and
+          `cloudinitdisk` entries, and were both StorageClass placeholders replaced?
+        failedTaskHelp: >-
+          Check the manifest for matching disk and volume names and verify that
+          both StorageClass names exist with `oc get storageclass`.
+      summary:
+        success: "You created a VM with separate boot and data disks."
+        failed: "Review the VM manifest and StorageClass values."
+
+    - title: "Verify the VM and storage resources"
+      description: |-
+        Wait for both DataVolumes to finish importing or provisioning:
+
+        `oc get dv -n multi-disk-demo -w`{{"{{execute}}"}}
+
+        Press **Ctrl+C** after both DataVolumes show `Succeeded`.
+
+        Check the VM and PVCs:
+
+        `oc get vm -n multi-disk-demo`{{"{{execute}}"}}
+
+        `oc get pvc -n multi-disk-demo`{{"{{execute}}"}}
+
+        The VM should show `Running` and `Ready True`. The root and data PVCs
+        should both show `Bound`, with the StorageClasses selected in the
+        manifest.
+      review:
+        instructions: >-
+          Is `multi-disk-vm` running, and are both PVCs bound to their expected
+          StorageClasses?
+        failedTaskHelp: >-
+          Inspect DataVolumes and events with
+          `oc describe dv -n multi-disk-demo` and
+          `oc get events -n multi-disk-demo --sort-by=.lastTimestamp`.
+      summary:
+        success: "The VM and both persistent disks are ready."
+        failed: "Wait for storage provisioning or inspect the VM events."
+
+    - title: "Format and mount the data disk"
+      description: |-
+        Open the VM console. This command is interactive and is provided for
+        copying only:
+
+        `virtctl console multi-disk-vm -n multi-disk-demo`{{"{{copy}}"}}
+
+        Log in as `fedora` with the demo password from the cloud-init manifest.
+        Inside the guest, identify the unformatted data disk. Do not assume its
+        device name without checking `lsblk`.
+
+        `lsblk`{{"{{copy}}"}}
+
+        The boot disk is usually `vda` and the blank data disk is usually `vdb`,
+        but device names can vary. Replace `/dev/vdb` below with the verified
+        data-disk path:
+
+        `sudo mkfs.xfs /dev/vdb`{{"{{copy}}"}}
+
+        `sudo mkdir -p /mnt/data`{{"{{copy}}"}}
+
+        `sudo mount /dev/vdb /mnt/data`{{"{{copy}}"}}
+
+        Verify the mount and write test data:
+
+        `df -h /mnt/data`{{"{{copy}}"}}
+
+        `sudo sh -c "echo 'Multi-disk test data' > /mnt/data/test.txt"`{{"{{copy}}"}}
+
+        `cat /mnt/data/test.txt`{{"{{copy}}"}}
+
+        Press **Ctrl+]** to exit the console. If the mount must persist across
+        reboots, use the disk UUID in `/etc/fstab` rather than relying on `/dev/vdb`.
+      review:
+        instructions: >-
+          Did you identify the blank data disk, mount it at `/mnt/data`, and read
+          back `Multi-disk test data`?
+        failedTaskHelp: >-
+          Check `lsblk`, confirm that you selected the blank data disk, and
+          inspect `mount` and `df -h` output inside the guest.
+      summary:
+        success: "You formatted and mounted the VM data disk."
+        failed: "The data disk was not mounted or readable."
+
+    - title: "Verify disk storage isolation"
+      description: |-
+        Confirm that each PVC has its own PersistentVolume and StorageClass:
+
+        `oc get pvc multi-disk-rootdisk -n multi-disk-demo -o jsonpath='StorageClass: {.spec.storageClassName}, Volume: {.spec.volumeName}, Capacity: {.status.capacity.storage}'`{{"{{execute}}"}}
+
+        `oc get pvc multi-disk-datadisk -n multi-disk-demo -o jsonpath='StorageClass: {.spec.storageClassName}, Volume: {.spec.volumeName}, Capacity: {.status.capacity.storage}'`{{"{{execute}}"}}
+
+        This confirms that the boot and data disks are independently provisioned
+        and can have different expansion, backup, or reclaim policies.
+      review:
+        instructions: "Do both PVCs report separate volumes and the expected StorageClasses?"
+        failedTaskHelp: >-
+          Inspect the PVC definitions with `oc get pvc -n multi-disk-demo -o yaml`.
+      summary:
+        success: "You verified independent storage for the VM disks."
+        failed: "Review the PVC and StorageClass configuration."
+
+    - title: "Clean up the demo"
+      description: |-
+        Delete the project and its VM, DataVolumes, and PVCs:
+
+        `oc delete namespace multi-disk-demo`{{"{{execute}}"}}
+
+        If you used an existing second StorageClass, do not delete it. If you
+        created a dedicated test StorageClass, remove it only after confirming
+        that no other workloads use it:
+
+        `oc delete storageclass <test-storage-class>`{{"{{copy}}"}}
+      review:
+        instructions: "Was the multi-disk-demo namespace removed?"
+        failedTaskHelp: "Check the namespace status with oc get namespace multi-disk-demo."
+      summary:
+        success: "You cleaned up the multi-disk VM demo."
+        failed: "The demo namespace still exists."
+  conclusion: |-
+    Congratulations! You created a VM with separate boot and data disks,
+    provisioned them through DataVolumes, formatted and mounted the data disk,
+    and verified independent storage resources.
+
+    This pattern supports separating operating system, application data, and
+    logs while allowing each disk to use an appropriate StorageClass.
+  nextQuickStart: []
+{{- end }}

@@ -35,6 +35,8 @@ plugin:
     annotations: {}
     name: ""
   quickStarts:
+    multi-disk-configuration:
+      enabled: true
     vm-export-import:
       enabled: true
     windows-golden-images:

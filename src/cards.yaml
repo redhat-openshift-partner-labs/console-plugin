@@ -37,6 +37,12 @@
   body: Install virtctl and use it to manage, access, and troubleshoot virtual machines.
   quickStartId: virtctl-basics
 
+- id: multi-disk-configuration
+  kind: quickstart
+  title: Configure multiple VM disks
+  body: Create a VM with separate boot and data disks and verify their storage configuration.
+  quickStartId: multi-disk-configuration
+
 - id: install-configure-ocpv-operator
   kind: quickstart
   title: Install and configure OpenShift Virtualization
