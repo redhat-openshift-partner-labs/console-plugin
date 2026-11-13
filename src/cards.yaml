@@ -30,7 +30,7 @@
   title: Create a VM with CLI YAML
   body: Generate, review, and apply a VirtualMachine YAML manifest with the OpenShift CLI.
   quickStartId: create-vm-cli-yaml
-  
+
 - id: virtctl-basics
   kind: quickstart
   title: Using virtctl for VM management
@@ -85,11 +85,18 @@
   body: Start a guided walkthrough for cloning virtual machines in OpenShift Virtualization.
   quickStartId: cloning-vms
 
+- id: windows-vm-virtio-drivers
+  kind: quickstart
+  title: Install Windows with VirtIO drivers
+  body: Upload installation media, install Windows Server 2025 with VirtIO drivers, and verify the QEMU guest agent.
+  quickStartId: windows-vm-virtio-drivers
+
 - id: network-policies-vms
   kind: quickstart
   title: "VM Cookbook: Network Policies for VMs"
   body: Deny incoming traffic to a VM, then allow HTTP from a labeled client using NetworkPolicy.
   quickStartId: network-policies-vms
+
 - id: static-ip-configuration
   kind: quickstart
   title: "VM Cookbook: Static IP Configuration"

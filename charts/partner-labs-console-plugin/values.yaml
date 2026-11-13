@@ -39,6 +39,8 @@ plugin:
       enabled: true
     windows-golden-images:
       enabled: true
+    windows-vm-virtio-drivers:
+      enabled: true
     network-policies-vms:
       enabled: true
     virtctl-basics:
