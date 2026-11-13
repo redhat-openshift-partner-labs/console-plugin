@@ -65,6 +65,8 @@ plugin:
       enabled: true
     cloud-init-fundamentals:
       enabled: true
+    remote-access-linux-vms:
+      enabled: true
   jobs:
     patchConsoles:
       enabled: true
