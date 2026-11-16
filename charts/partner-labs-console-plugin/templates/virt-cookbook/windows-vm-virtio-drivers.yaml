@@ -400,6 +400,6 @@ spec:
   conclusion: |-
     You uploaded installation media, installed Windows on a VirtIO disk,
     configured the remaining drivers, and verified guest-agent integration.
-    The original [Windows VirtIO cookbook tutorial](https://github.com/RedHatQuickCourses/ocp-virt-cookbook/blob/81ce046ce5f684c111f5fb2ce2ae563bdc2a0469/modules/vm-configuration/pages/windows-vm-virtio-drivers.adoc)
+    The original [Windows VirtIO cookbook tutorial](https://redhatquickcourses.github.io/ocp-virt-cookbook/ocp-virt-cookbook/1/vm-configuration/windows-vm-virtio-drivers.html)
     provides additional context.
 {{- end }}
