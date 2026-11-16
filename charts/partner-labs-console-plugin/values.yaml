@@ -35,6 +35,8 @@ plugin:
     annotations: {}
     name: ""
   quickStarts:
+    vm-export-import:
+      enabled: true
     windows-golden-images:
       enabled: true
     network-policies-vms:

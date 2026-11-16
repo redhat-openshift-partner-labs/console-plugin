@@ -108,6 +108,12 @@
   body: Create a Fedora VM, inspect its built-in charts, and query KubeVirt performance and lifecycle metrics with PromQL.
   quickStartId: vm-monitoring-metrics
 
+- id: vm-export-import
+  kind: quickstart
+  title: Exporting and Importing VMs for Cross-Cluster Mobility
+  body: Export a VM disk to a registry, import it on another cluster, and recreate the VM.
+  quickStartId: vm-export-import
+
 - id: pipeline
   kind: pipeline
   title: Tekton Pipeline
