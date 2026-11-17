@@ -287,4 +287,16 @@ test.describe('Console plugin cards', () => {
       }),
     ).toBeVisible();
   });
+
+  test('opens the node placement and affinity quick start', async ({ page }) => {
+    await page.goto('/partner-labs-demos');
+    await page.getByTestId('card-action-node-placement-affinity').click();
+    await expect(
+      page.getByRole('heading', {
+        name: 'Control VM node placement and affinity',
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(page.getByText('Prepare the placement project', { exact: true })).toBeVisible();
+  });
 });

@@ -127,6 +127,12 @@
   body: Export a VM disk to a registry, import it on another cluster, and recreate the VM.
   quickStartId: vm-export-import
 
+- id: node-placement-affinity
+  kind: quickstart
+  title: Control VM node placement and affinity
+  body: Pin VMs to selected nodes, co-locate related VMs, and separate VMs for availability.
+  quickStartId: node-placement-affinity
+
 - id: pipeline
   kind: pipeline
   title: Tekton Pipeline

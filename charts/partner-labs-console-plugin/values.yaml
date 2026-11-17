@@ -37,6 +37,8 @@ plugin:
   quickStarts:
     multi-disk-configuration:
       enabled: true
+    node-placement-affinity:
+      enabled: true
     vm-export-import:
       enabled: true
     windows-golden-images:
