@@ -6,7 +6,7 @@ metadata:
   labels:
     {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
 spec:
-  displayName: "Install and configure OpenShift Virtualization"
+  displayName: "VM Cookbook: Install and configure OpenShift Virtualization"
   description: >-
     Learn how to install the OpenShift Virtualization Operator from OperatorHub,
     create the HyperConverged resource, and verify that virtualization components,

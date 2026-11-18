@@ -6,7 +6,7 @@ metadata:
   labels:
     {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
 spec:
-  displayName: "Cloud-init Fundamentals"
+  displayName: "VM Cookbook: Cloud-init Fundamentals"
   description: "Deliver first-boot configuration to a Fedora virtual machine with KubeVirt cloud-init."
   durationMinutes: 25
   tags:

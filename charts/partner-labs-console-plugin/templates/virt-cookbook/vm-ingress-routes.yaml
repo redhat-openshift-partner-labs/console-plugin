@@ -6,7 +6,7 @@ metadata:
   labels:
     {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
 spec:
-  displayName: "Expose a VM with an HTTPS Route"
+  displayName: "VM Cookbook: Expose a VM with an HTTPS Route"
   description: "Run Nginx in a Fedora VM, expose it through a Service and an HTTPS Route, and clean up the demo resources."
   durationMinutes: 15
   tags:

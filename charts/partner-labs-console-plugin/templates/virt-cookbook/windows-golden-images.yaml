@@ -29,7 +29,7 @@ metadata:
   labels:
     {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
 spec:
-  displayName: "Create Windows golden images"
+  displayName: "VM Cookbook: Create Windows golden images"
   description: "Build a Windows Server 2025 golden image with Tekton, clone it with sysprep settings, and verify the guest."
   durationMinutes: 90
   tags:

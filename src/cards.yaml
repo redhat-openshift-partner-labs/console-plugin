@@ -21,73 +21,73 @@
 
 - id: vm-instancetypes-and-preferences
   kind: quickstart
-  title: VM Instancetypes & Preferences
+  title: "VM Cookbook: VM Instancetypes & Preferences"
   body: Start a guided walkthrough defined by a ConsoleQuickStart resource.
   quickStartId: vm-instancetypes-and-preferences
 
 - id: create-vm-cli-yaml
   kind: quickstart
-  title: Create a VM with CLI YAML
+  title: "VM Cookbook: Create a VM with CLI YAML"
   body: Generate, review, and apply a VirtualMachine YAML manifest with the OpenShift CLI.
   quickStartId: create-vm-cli-yaml
 
 - id: virtctl-basics
   kind: quickstart
-  title: Using virtctl for VM management
+  title: "VM Cookbook: Using virtctl for VM management"
   body: Install virtctl and use it to manage, access, and troubleshoot virtual machines.
   quickStartId: virtctl-basics
 
 - id: install-configure-ocpv-operator
   kind: quickstart
-  title: Install and configure OpenShift Virtualization
+  title: "VM Cookbook: Install and configure OpenShift Virtualization"
   body: Install the OpenShift Virtualization Operator and verify its deployment.
   quickStartId: install-configure-ocpv-operator
 
 - id: install-lvm-storage-operator
   kind: quickstart
-  title: Install the LVM Storage Operator
+  title: "VM Cookbook: Install the LVM Storage Operator"
   body: Install and configure LVM storage on a cluster with a spare local disk.
   quickStartId: install-lvm-storage-operator
 
 - id: create-vm-web-console
   kind: quickstart
-  title: Create a VM from the web console
+  title: "VM Cookbook: Create a VM from the web console"
   body: Follow a guided walkthrough to create, access, and manage a VM from a template.
   quickStartId: create-vm-web-console
 
 - id: vm-templates
   kind: quickstart
-  title: Create custom VM templates
+  title: "VM Cookbook: Create custom VM templates"
   body: Follow a guided walkthrough to inspect, customize, and test reusable VM templates with the CLI.
   quickStartId: vm-templates
 
 - id: windows-golden-images
   kind: quickstart
-  title: Create Windows golden images
+  title: "VM Cookbook: Create Windows golden images"
   body: Build a Windows Server 2025 golden image with Tekton, clone it with sysprep settings, and verify the guest.
   quickStartId: windows-golden-images
 
 - id: vm-ingress-routes
   kind: quickstart
-  title: Expose a VM with an HTTPS Route
+  title: "VM Cookbook: Expose a VM with an HTTPS Route"
   body: Run Nginx in a Fedora VM, expose it through a Service and an HTTPS Route, and clean up the demo resources.
   quickStartId: vm-ingress-routes
 
 - id: vm-lifecycle-states
   kind: quickstart
-  title: Understanding VM lifecycle states
+  title: "VM Cookbook: Understanding VM lifecycle states"
   body: Manage virtual machine lifecycle by starting, monitoring, pausing, and stopping VMs.
   quickStartId: vm-lifecycle-states
 
 - id: cloning-vms
   kind: quickstart
-  title: Cloning Virtual Machines
+  title: "VM Cookbook: Cloning Virtual Machines"
   body: Start a guided walkthrough for cloning virtual machines in OpenShift Virtualization.
   quickStartId: cloning-vms
 
 - id: windows-vm-virtio-drivers
   kind: quickstart
-  title: Install Windows with VirtIO drivers
+  title: "VM Cookbook: Install Windows with VirtIO drivers"
   body: Upload installation media, install Windows Server 2025 with VirtIO drivers, and verify the QEMU guest agent.
   quickStartId: windows-vm-virtio-drivers
 
@@ -105,7 +105,7 @@
 
 - id: cloud-init-fundamentals
   kind: quickstart
-  title: Cloud-init Fundamentals
+  title: "VM Cookbook: Cloud-init Fundamentals"
   body: Follow a guided walkthrough to deliver first-boot configuration to a Fedora virtual machine with KubeVirt cloud-init NoCloud.
   quickStartId: cloud-init-fundamentals
 
@@ -117,7 +117,7 @@
 
 - id: vm-export-import
   kind: quickstart
-  title: Exporting and Importing VMs for Cross-Cluster Mobility
+  title: "VM Cookbook: Exporting and Importing VMs for Cross-Cluster Mobility"
   body: Export a VM disk to a registry, import it on another cluster, and recreate the VM.
   quickStartId: vm-export-import
 

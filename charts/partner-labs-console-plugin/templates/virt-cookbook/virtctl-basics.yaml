@@ -6,7 +6,7 @@ metadata:
   labels:
     {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
 spec:
-  displayName: "Using virtctl for VM management"
+  displayName: "VM Cookbook: Using virtctl for VM management"
   description: >-
     Install virtctl and use it to inspect, start, stop, restart, access, and
     troubleshoot virtual machines in OpenShift Virtualization.

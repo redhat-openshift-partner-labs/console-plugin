@@ -6,7 +6,7 @@ metadata:
   labels:
     {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
 spec:
-  displayName: "Install the LVM Storage Operator"
+  displayName: "VM Cookbook: Install the LVM Storage Operator"
   description: >-
     Install and configure the LVM Storage Operator on a cluster with a spare
     local disk, create an LVMCluster, configure default storage, and verify
@@ -78,7 +78,7 @@ spec:
         success: "You identified a disk for LVM storage."
         failed: "Confirm the disk selection before continuing."
 
-    - title: "Install the LVM Storage Operator"
+    - title: "VM Cookbook: Install the LVM Storage Operator"
       description: |-
         Install the operator from the OpenShift web console.
 

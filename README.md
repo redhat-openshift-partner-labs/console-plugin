@@ -5,7 +5,7 @@ This dynamic plugin demonstrates three ways a card can act in the OpenShift Cons
 | Interaction         | Cards                                                                                        | Implementation                                                                                |
 | ------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | Open a plugin page  | Custom Page, How-to Use Demos, Creating Virtual Machines, Custom VM Templates                | `console-extensions.json`, `src/components/ExamplePage.tsx`, `src/cookbook/`                  |
-| Start a walkthrough | Create a VM from the web console, Create custom VM templates, VM Instancetypes & Preferences | `src/components/DemosPage.tsx`, `charts/partner-labs-console-plugin/templates/virt-cookbook/` |
+| Start a walkthrough | VM Cookbook: Create a VM from the web console, VM Cookbook: Create custom VM templates, VM Cookbook: VM Instancetypes & Preferences | `src/components/DemosPage.tsx`, `charts/partner-labs-console-plugin/templates/virt-cookbook/` |
 | Trigger a pipeline  | Tekton Pipeline                                                                              | `src/components/DemosPage.tsx`                                                                |
 
 `src/cards.yaml` is the sparse card registry. Each long cookbook body lives in
@@ -121,13 +121,13 @@ This target requires the GitHub CLI and a clean working tree.
 Set `plugin.quickStarts.vm-instancetypes-and-preferences.enabled=false` to omit the
 walkthrough resource.
 
-The **Create a VM from the web console** card launches the `create-vm-web-console`
+The **VM Cookbook: Create a VM from the web console** card launches the `create-vm-web-console`
 Quick Start, adapted from the VM cookbook's `create-vm-web-console.adoc`. It covers
 template selection, customization, provisioning, console access, lifecycle
 operations, monitoring, and optional cleanup. Set
 `plugin.quickStarts.create-vm-web-console.enabled=false` to omit its resource.
 
-The **Create custom VM templates** card launches the `vm-templates` Quick Start,
+The **VM Cookbook: Create custom VM templates** card launches the `vm-templates` Quick Start,
 adapted from the VM cookbook's `vm-templates.adoc`. It covers CLI template
 inspection, baseline VM deployment, custom template registration, parameter
 processing, guest login, and cleanup of a dedicated tutorial project. Set

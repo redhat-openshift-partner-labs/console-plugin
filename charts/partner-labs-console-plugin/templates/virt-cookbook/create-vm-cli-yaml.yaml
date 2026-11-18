@@ -6,7 +6,7 @@ metadata:
   labels:
     {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
 spec:
-  displayName: "Create a VM with CLI YAML"
+  displayName: "VM Cookbook: Create a VM with CLI YAML"
   description: "Generate, review, and apply a VirtualMachine YAML manifest with the OpenShift CLI."
   durationMinutes: 20
   tags:

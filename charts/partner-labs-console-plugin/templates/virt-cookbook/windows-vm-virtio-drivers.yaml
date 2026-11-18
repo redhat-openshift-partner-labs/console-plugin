@@ -29,7 +29,7 @@ metadata:
   labels:
     {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
 spec:
-  displayName: "Install Windows with VirtIO drivers"
+  displayName: "VM Cookbook: Install Windows with VirtIO drivers"
   description: "Upload installation media, install Windows Server 2025 with VirtIO drivers, and verify the QEMU guest agent."
   durationMinutes: 90
   tags:
