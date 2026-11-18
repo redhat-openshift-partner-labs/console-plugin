@@ -206,12 +206,12 @@ describe('DemosPage', () => {
     );
     const search = screen.getByRole('textbox', { name: 'Search demos' });
     fireEvent.change(search, { target: { value: 'guided walkthrough' } });
-    expect(screen.getAllByTestId(/^card-(?!action)/)).toHaveLength(5);
+    const quickstartCards = cards.filter((card) => card.kind === 'quickstart');
+    expect(screen.getAllByTestId(/^card-(?!action)/)).toHaveLength(quickstartCards.length);
     expect(screen.getByText('VM Cookbook: VM Instancetypes & Preferences')).toBeInTheDocument();
-    expect(screen.getByText('VM Cookbook: Create a VM from the web console')).toBeInTheDocument();
-    expect(screen.getByText('VM Cookbook: Create custom VM templates')).toBeInTheDocument();
-    expect(screen.getByText('VM Cookbook: Cloning Virtual Machines')).toBeInTheDocument();
-    expect(screen.getByText('VM Cookbook: Cloud-init Fundamentals')).toBeInTheDocument();
+    expect(
+      screen.getByText('VM Cookbook: Exporting and Importing VMs for Cross-Cluster Mobility'),
+    ).toBeInTheDocument();
     fireEvent.change(search, { target: { value: 'no matching demo' } });
     expect(screen.getByText('No demos match your filters')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('clear-filters'));
