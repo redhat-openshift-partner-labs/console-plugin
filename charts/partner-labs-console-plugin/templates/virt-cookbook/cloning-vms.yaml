@@ -6,7 +6,7 @@ metadata:
   labels:
     {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
 spec:
-  displayName: "Cloning Virtual Machines"
+  displayName: "VM Cookbook: Cloning Virtual Machines"
   description: "Clone existing virtual machines for rapid deployment of identical or customized VM instances with pre-configured software and settings."
   durationMinutes: 20
   tags:

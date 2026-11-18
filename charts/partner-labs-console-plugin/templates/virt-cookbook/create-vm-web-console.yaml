@@ -6,7 +6,7 @@ metadata:
   labels:
     {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
 spec:
-  displayName: "Create a VM from the web console"
+  displayName: "VM Cookbook: Create a VM from the web console"
   description: "Create, access, and manage a virtual machine using an OpenShift Virtualization template."
   durationMinutes: 25
   tags:
@@ -191,6 +191,6 @@ spec:
     approved configurations.
 
     Continue with the **Custom VM Templates** cookbook card or the
-    **VM Instancetypes & Preferences** walkthrough in Partner Labs Demos.
+    **VM Cookbook: VM Instancetypes & Preferences** walkthrough in Partner Labs Demos.
   nextQuickStart: []
 {{- end }}

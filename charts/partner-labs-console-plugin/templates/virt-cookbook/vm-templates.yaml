@@ -6,7 +6,7 @@ metadata:
   labels:
     {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
 spec:
-  displayName: "Create custom VM templates"
+  displayName: "VM Cookbook: Create custom VM templates"
   description: "Inspect, process, customize, and test reusable virtual machine templates with the OpenShift CLI."
   durationMinutes: 30
   tags:
@@ -365,7 +365,7 @@ spec:
     manifests. Saving a processed manifest once also preserves the exact generated
     credentials used for that deployment.
 
-    Continue with **VM Instancetypes & Preferences** to explore reusable compute
+    Continue with **VM Cookbook: VM Instancetypes & Preferences** to explore reusable compute
     profiles and OS settings, or use the **Custom VM Templates** cookbook card
     for the full reference guide.
   nextQuickStart: []

@@ -109,7 +109,10 @@ test.describe('Console plugin cards', () => {
     await page.goto('/partner-labs-demos');
     await page.getByTestId('card-action-create-vm-web-console').click();
     await expect(
-      page.getByRole('heading', { name: 'Create a VM from the web console', exact: true }),
+      page.getByRole('heading', {
+        name: 'VM Cookbook: Create a VM from the web console',
+        exact: true,
+      }),
     ).toBeVisible();
     await expect(
       page.getByText('Open VirtualMachines and select a project', { exact: true }),
@@ -121,7 +124,7 @@ test.describe('Console plugin cards', () => {
     await page.getByTestId('card-action-install-configure-ocpv-operator').click();
     await expect(
       page.getByRole('heading', {
-        name: 'Install and configure OpenShift Virtualization',
+        name: 'VM Cookbook: Install and configure OpenShift Virtualization',
         exact: true,
       }),
     ).toBeVisible();
@@ -132,7 +135,7 @@ test.describe('Console plugin cards', () => {
     await page.goto('/partner-labs-demos');
     await page.getByTestId('card-action-windows-golden-images').click();
     await expect(
-      page.getByRole('heading', { name: 'Create Windows golden images', exact: true }),
+      page.getByRole('heading', { name: 'VM Cookbook: Create Windows golden images', exact: true }),
     ).toBeVisible();
     await expect(page.getByText('Prepare a dedicated project', { exact: true })).toBeVisible();
   });
@@ -141,7 +144,10 @@ test.describe('Console plugin cards', () => {
     await page.goto('/partner-labs-demos');
     await page.getByTestId('card-action-vm-ingress-routes').click();
     await expect(
-      page.getByRole('heading', { name: 'Expose a VM with an HTTPS Route', exact: true }),
+      page.getByRole('heading', {
+        name: 'VM Cookbook: Expose a VM with an HTTPS Route',
+        exact: true,
+      }),
     ).toBeVisible();
     await expect(page.getByText('Create a dedicated test project', { exact: true })).toBeVisible();
   });
@@ -150,7 +156,10 @@ test.describe('Console plugin cards', () => {
     await page.goto('/partner-labs-demos');
     await page.getByTestId('card-action-vm-lifecycle-states').click();
     await expect(
-      page.getByRole('heading', { name: 'Understanding VM lifecycle states', exact: true }),
+      page.getByRole('heading', {
+        name: 'VM Cookbook: Understanding VM lifecycle states',
+        exact: true,
+      }),
     ).toBeVisible();
     await expect(page.getByText('Understand VM and VMI resources', { exact: true })).toBeVisible();
   });
@@ -159,7 +168,10 @@ test.describe('Console plugin cards', () => {
     await page.goto('/partner-labs-demos');
     await page.getByTestId('card-action-windows-vm-virtio-drivers').click();
     await expect(
-      page.getByRole('heading', { name: 'Install Windows with VirtIO drivers', exact: true }),
+      page.getByRole('heading', {
+        name: 'VM Cookbook: Install Windows with VirtIO drivers',
+        exact: true,
+      }),
     ).toBeVisible();
     await expect(
       page.getByText('Prepare a project and installation media', { exact: true }),
@@ -191,7 +203,7 @@ test.describe('Console plugin cards', () => {
     await page.getByTestId('card-action-install-lvm-storage-operator').click();
     await expect(
       page.getByRole('heading', {
-        name: 'Install the LVM Storage Operator',
+        name: 'VM Cookbook: Install the LVM Storage Operator',
         exact: true,
       }),
     ).toBeVisible();
@@ -202,7 +214,7 @@ test.describe('Console plugin cards', () => {
     await page.goto('/partner-labs-demos');
     await page.getByTestId('card-action-create-vm-cli-yaml').click();
     await expect(
-      page.getByRole('heading', { name: 'Create a VM with CLI YAML', exact: true }),
+      page.getByRole('heading', { name: 'VM Cookbook: Create a VM with CLI YAML', exact: true }),
     ).toBeVisible();
     await expect(
       page.getByText('Create a project and verify the boot source', { exact: true }),
@@ -213,7 +225,10 @@ test.describe('Console plugin cards', () => {
     await page.goto('/partner-labs-demos');
     await page.getByTestId('card-action-virtctl-basics').click();
     await expect(
-      page.getByRole('heading', { name: 'Using virtctl for VM management', exact: true }),
+      page.getByRole('heading', {
+        name: 'VM Cookbook: Using virtctl for VM management',
+        exact: true,
+      }),
     ).toBeVisible();
     await expect(page.getByText('Install virtctl', { exact: true })).toBeVisible();
   });
@@ -222,16 +237,16 @@ test.describe('Console plugin cards', () => {
     await page.goto('/partner-labs-demos');
     await page.getByTestId('card-action-vm-templates').click();
     await expect(
-      page.getByRole('heading', { name: 'Create custom VM templates', exact: true }),
+      page.getByRole('heading', { name: 'VM Cookbook: Create custom VM templates', exact: true }),
     ).toBeVisible();
     await expect(page.getByText('Inspect a supplied VM template', { exact: true })).toBeVisible();
   });
 
-  test('opens the Cloud-init Fundamentals quick start', async ({ page }) => {
+  test('opens the VM Cookbook: Cloud-init Fundamentals quick start', async ({ page }) => {
     await page.goto('/partner-labs-demos');
     await page.getByTestId('card-action-cloud-init-fundamentals').click();
     await expect(
-      page.getByRole('heading', { name: 'Cloud-init Fundamentals', exact: true }),
+      page.getByRole('heading', { name: 'VM Cookbook: Cloud-init Fundamentals', exact: true }),
     ).toBeVisible();
     await expect(page.getByText('Check the Fedora boot source')).toBeVisible();
   });
@@ -251,7 +266,7 @@ test.describe('Console plugin cards', () => {
     await expect(page).toHaveURL((url) => url.pathname === '/partner-labs-demos');
     await expect(
       page.getByRole('heading', {
-        name: 'Exporting and Importing VMs for Cross-Cluster Mobility',
+        name: 'VM Cookbook: Exporting and Importing VMs for Cross-Cluster Mobility',
         exact: true,
       }),
     ).toBeVisible();

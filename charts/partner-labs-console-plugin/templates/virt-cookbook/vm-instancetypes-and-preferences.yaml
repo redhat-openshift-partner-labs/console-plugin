@@ -6,7 +6,7 @@ metadata:
   labels:
     {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
 spec:
-  displayName: "VM Instancetypes & Preferences"
+  displayName: "VM Cookbook: VM Instancetypes & Preferences"
   description: "Learn how instancetypes and preferences standardize virtual machine definitions in OpenShift Virtualization."
   durationMinutes: 15
   tags:

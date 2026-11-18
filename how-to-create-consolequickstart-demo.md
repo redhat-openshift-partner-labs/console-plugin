@@ -51,6 +51,16 @@ The card title and CR's `spec.displayName` are separate: the first appears in th
 gallery, the second in the Console walkthrough. A QuickStart card needs no new
 route, exposed module, or cookbook content file.
 
+### Title convention for VM cookbook QuickStarts
+
+For virtualization cookbook demos, use the prefix **`VM Cookbook: `** in both:
+
+- `src/cards.yaml` card `title`
+- `ConsoleQuickStart.spec.displayName`
+
+Keep the text after the prefix identical so the gallery card title and walkthrough
+title match.
+
 ## Add a demo
 
 1. Copy an existing CR template, such as
