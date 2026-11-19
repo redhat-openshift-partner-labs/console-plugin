@@ -22,6 +22,7 @@ spec:
     - "Permission to create VirtualMachines, DataVolumes, and PVCs"
     - "A Fedora DataSource in openshift-virtualization-os-images"
     - "A default StorageClass configured"
+    - "Web Terminal Operator"
   introduction: |-
     A VM can use multiple disks for different purposes. The boot disk stores the
     operating system, while a separate data disk can store application data,
