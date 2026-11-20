@@ -58,11 +58,13 @@ deploy: check-image ## Install or upgrade the Helm release with IMAGE
 	@if [ -n "$(KUBE_CONTEXT)" ]; then \
 		"$(HELM)" upgrade --install "$(RELEASE)" "$(CHART)" \
 			--namespace "$(NAMESPACE)" --create-namespace \
+			--take-ownership \
 			--set-string "plugin.image=$(IMAGE)" \
 			--kube-context "$(KUBE_CONTEXT)"; \
 	else \
 		"$(HELM)" upgrade --install "$(RELEASE)" "$(CHART)" \
 			--namespace "$(NAMESPACE)" --create-namespace \
+			--take-ownership \
 			--set-string "plugin.image=$(IMAGE)"; \
 	fi
 
