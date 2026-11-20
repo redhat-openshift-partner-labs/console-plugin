@@ -106,14 +106,18 @@ make deploy-pr PR=50 IMAGE_REGISTRY=quay.io/your-namespace
 ```
 
 This checks out the PR, builds and pushes
-`quay.io/your-namespace/pr-50-quickstart:latest`, then deploys it with a PR-specific
-Helm release and namespace. Helm uses the current context from `KUBECONFIG` or
-the default kubeconfig; set `KUBE_CONTEXT` only to override that context. The
-working tree must be clean, and the selected container engine must be logged in
-to the image registry; the cluster must be able to pull the image. The target
-leaves the working tree checked out to the PR. Set `IMAGE` to a full image
-reference to override the generated image name. The PR-specific deployment stays
-available for manual review until its release and namespace are removed.
+`quay.io/your-namespace/pr-50-quickstart:latest`, then upgrades the default Helm
+release and namespace (`partner-labs-console-plugin`). Cluster-scoped chart
+resources such as `ConsolePlugin` keep that fixed name, so a separate PR release
+cannot adopt them. Deploy uses Helm `--take-ownership` so existing
+`ConsoleQuickStart` and related objects without Helm annotations can be adopted
+into that release. Override `RELEASE` or `NAMESPACE` only when intentionally
+replacing a non-default install. Helm uses the current context from
+`KUBECONFIG` or the default kubeconfig; set `KUBE_CONTEXT` only to override that
+context. The working tree must be clean, and the selected container engine must
+be logged in to the image registry; the cluster must be able to pull the image.
+The target leaves the working tree checked out to the PR. Set `IMAGE` to a full
+image reference to override the generated image name. Requires Helm 3.17+.
 
 Reviewers can check out a pull request with `make checkout-pr PR=<number>`.
 This target requires the GitHub CLI and a clean working tree.
