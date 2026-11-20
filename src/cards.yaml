@@ -97,6 +97,12 @@
   body: Upload installation media, install Windows Server 2025 with VirtIO drivers, and verify the QEMU guest agent.
   quickStartId: windows-vm-virtio-drivers
 
+- id: ssh-access-windows-vms
+  kind: quickstart
+  title: Connect to a Windows VM via SSH
+  body: Install OpenSSH on a Windows VM, fix the firewall profile, expose port 22 with a Service, and connect with password or SSH keys.
+  quickStartId: ssh-access-windows-vms
+
 - id: network-policies-vms
   kind: quickstart
   title: "VM Cookbook: Network Policies for VMs"

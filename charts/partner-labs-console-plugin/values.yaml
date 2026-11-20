@@ -43,6 +43,8 @@ plugin:
       enabled: true
     windows-vm-virtio-drivers:
       enabled: true
+    ssh-access-windows-vms:
+      enabled: true
     network-policies-vms:
       enabled: true
     virtctl-basics:

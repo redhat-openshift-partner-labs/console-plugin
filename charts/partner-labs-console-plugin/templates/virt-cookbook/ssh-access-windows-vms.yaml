@@ -1,0 +1,432 @@
+# Adapted from the OpenShift Virtualization Cookbook:
+# https://github.com/RedHatQuickCourses/ocp-virt-cookbook/blob/dfa9150f9c405da76364c1f3b14abfef738cb0c7/modules/vm-configuration/pages/ssh-access-windows-vms.adoc
+#
+# MIT License
+# Copyright (c) 2025 OpenShift Virtualization Cookbook
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+{{- if (index .Values.plugin.quickStarts "ssh-access-windows-vms").enabled }}
+apiVersion: console.openshift.io/v1
+kind: ConsoleQuickStart
+metadata:
+  name: ssh-access-windows-vms
+  labels:
+    {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
+spec:
+  displayName: "Connect to a Windows VM via SSH"
+  description: "Install OpenSSH on a Windows VM, fix the firewall profile, expose port 22 with a Service, and connect with password or SSH keys."
+  durationMinutes: 45
+  tags:
+    - virtualization
+    - windows
+    - ssh
+    - networking
+  prerequisites:
+    - "OpenShift with OpenShift Virtualization installed"
+    - "A running Windows VM (Windows 10 1809+, Windows 11, or Windows Server 2019/2022/2025) that uses the masquerade network binding on the pod network"
+    - "VNC or RDP console access to the Windows VM for initial OpenSSH setup"
+    - "Authenticated oc and matching virtctl CLI tools; Run controls require Web Terminal"
+    - "Permission to edit the VirtualMachine, create Services that select it, and reach a NodePort or LoadBalancer endpoint from your client"
+  introduction: |-
+    Windows 10 (version 1809+) and Windows Server 2019+ include OpenSSH Server
+    as an optional feature. Enabling SSH on a Windows VM gives you a command-line
+    interface you can script against, without requiring Remote Desktop or a
+    graphical session. That supports automation workflows, CI/CD pipelines, and
+    tools such as Ansible that manage Windows hosts over SSH.
+
+    Replace `<your-windows-vm-name>` and `<windows-username>` with your
+    VirtualMachine resource name and Windows account (for example,
+    `Administrator`) before running commands. PowerShell commands run inside the
+    guest as Administrator; cluster CLI commands that include placeholders are
+    marked for copying so you can adapt them first.
+  tasks:
+    - title: "Declare port 22 on the VM interface"
+      description: |-
+        When using masquerade networking, the virt-launcher pod only forwards
+        traffic for ports explicitly listed in the VM spec. If port 22 is not
+        declared, traffic from a Kubernetes Service never reaches the guest,
+        even if sshd is running inside the VM.
+
+        Verify that your VirtualMachine spec includes port 22 on the masquerade
+        interface:
+
+        ```yaml
+        spec:
+          template:
+            spec:
+              domain:
+                devices:
+                  interfaces:
+                    - masquerade: {}
+                      name: default
+                      ports:
+                        - port: 22
+              networks:
+                - name: default
+                  pod: {}
+        ```
+
+        List VirtualMachines in the active project, then inspect your Windows VM:
+
+        `oc get vm`{{"{{execute}}"}}
+
+        `oc get vm <your-windows-vm-name> -o yaml`{{"{{copy}}"}}
+
+        If the `ports` section is missing, edit the VirtualMachine and add the
+        `ports` array under the masquerade interface:
+
+        `oc edit vm <your-windows-vm-name>`{{"{{copy}}"}}
+
+        After saving, restart the VM for the change to take effect:
+
+        `virtctl restart <your-windows-vm-name>`{{"{{copy}}"}}
+      review:
+        instructions: "Does your Windows VM masquerade interface declare port 22?"
+        failedTaskHelp: "Confirm the ports array is under the masquerade interface and that you restarted the VM after editing."
+      summary:
+        success: "Port 22 is declared so the virt-launcher pod can forward SSH traffic."
+        failed: "Add port 22 and restart the VM before continuing."
+
+    - title: "Install OpenSSH Server on the Windows VM"
+      description: |-
+        Connect to the Windows VM through the OpenShift console or VNC to run
+        the initial setup commands.
+
+        Open **Virtualization > VirtualMachines**, select your VM, then open the
+        **Console** tab. Alternatively, from a local terminal with a VNC viewer:
+
+        `virtctl vnc <your-windows-vm-name>`{{"{{copy}}"}}
+
+        Open **Windows PowerShell as Administrator** inside the guest and check
+        whether OpenSSH Server is available:
+
+        ```powershell
+        Get-WindowsCapability -Online | Where-Object Name -like 'OpenSSH.Server*'
+        ```
+
+        Expect output similar to:
+
+        ```
+        Name  : OpenSSH.Server~~~~0.0.1.0
+        State : NotPresent
+        ```
+
+        If the state shows **Installed**, skip the install command. Otherwise
+        install the OpenSSH Server feature:
+
+        ```powershell
+        Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+        ```
+
+        Expect `Online : True` and `RestartNeeded : False`.
+      review:
+        instructions: "Is OpenSSH.Server installed on the Windows VM?"
+        failedTaskHelp: "Use an Administrator PowerShell session in the guest console. Confirm the capability name and that Windows can reach update services if the install fails."
+      summary:
+        success: "OpenSSH Server is installed in the guest."
+        failed: "Finish installing OpenSSH Server before configuring sshd."
+
+    - title: "Configure the SSH service and firewall"
+      description: |-
+        Still in **Administrator PowerShell** inside the guest, start `sshd` and
+        set it to start automatically on boot:
+
+        ```powershell
+        Start-Service sshd
+        Set-Service -Name sshd -StartupType Automatic
+        ```
+
+        Verify the service is running:
+
+        ```powershell
+        Get-Service sshd
+        ```
+
+        Expect status **Running** for `sshd` / OpenSSH SSH Server.
+
+        The OpenSSH Server installer creates a Windows Firewall rule
+        automatically. Confirm it exists:
+
+        ```powershell
+        Get-NetFirewallRule -Name *OpenSSH-Server* | Select-Object Name, Enabled, Direction, Action
+        ```
+
+        Expect `OpenSSH-Server-In-TCP` enabled for inbound allow. If the rule is
+        missing, create it:
+
+        ```powershell
+        New-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -DisplayName 'OpenSSH Server (sshd)' -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22
+        ```
+
+        By default, the OpenSSH firewall rule applies only to the **Private**
+        network profile. Windows classifies the KubeVirt masquerade bridge as a
+        **Public** network because it does not recognize the virtual adapter.
+        That mismatch silently blocks inbound SSH even when sshd is running.
+
+        Check which profile the rule applies to:
+
+        ```powershell
+        Get-NetFirewallRule -DisplayName "OpenSSH SSH Server (sshd)" | Select-Object DisplayName, Profile
+        ```
+
+        Check the active network profile:
+
+        ```powershell
+        Get-NetConnectionProfile | Select-Object InterfaceAlias, NetworkCategory
+        ```
+
+        If the rule profile is `Private` but the network category is `Public`,
+        update the rule to apply to all profiles:
+
+        ```powershell
+        Set-NetFirewallRule -DisplayName "OpenSSH SSH Server (sshd)" -Profile Any
+        ```
+
+        Without this step, SSH connections to the VM time out even though sshd
+        is running and the firewall rule appears enabled. This is the most
+        common cause of SSH connectivity failures on Windows VMs in OpenShift
+        Virtualization.
+      review:
+        instructions: "Is sshd running, and does the OpenSSH firewall rule apply to the Public (or Any) profile?"
+        failedTaskHelp: "Confirm sshd is Running, recreate the inbound rule if needed, then set the OpenSSH firewall rule profile to Any when the guest network is Public."
+      summary:
+        success: "sshd is running and the firewall allows SSH on the masquerade network."
+        failed: "Fix the service or firewall profile before exposing the port."
+
+    - title: "Set PowerShell as the default shell"
+      description: |-
+        By default, Windows SSH sessions open `cmd.exe`. To use PowerShell
+        instead, run this in **Administrator PowerShell** inside the guest:
+
+        ```powershell
+        New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -PropertyType String -Force
+        ```
+
+        This change takes effect for new SSH sessions. Existing sessions keep
+        their current shell.
+      review:
+        instructions: "Did you set the OpenSSH DefaultShell registry value to powershell.exe?"
+        failedTaskHelp: "Run the New-ItemProperty command as Administrator and confirm the path HKLM:\\SOFTWARE\\OpenSSH."
+      summary:
+        success: "New SSH sessions will use PowerShell."
+        failed: "Set DefaultShell before testing remote sessions."
+
+    - title: "Expose the SSH port outside the cluster"
+      description: |-
+        The Windows VM pod network is internal to the cluster. To reach port 22
+        from outside, create a Kubernetes Service.
+
+        **Option A: NodePort Service.** A NodePort maps a high-numbered port on
+        every cluster node to port 22 on the VM. Save this as
+        `windows-ssh-nodeport-service.yaml`, replacing
+        `<your-windows-vm-name>`:
+
+        ```yaml
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: windows-ssh-nodeport
+        spec:
+          type: NodePort
+          selector:
+            vm.kubevirt.io/name: <your-windows-vm-name>
+          ports:
+            - protocol: TCP
+              port: 22
+              targetPort: 22
+              nodePort: 30022
+        ```
+
+        Apply and verify the Service in the VM's project:
+
+        `oc apply -f windows-ssh-nodeport-service.yaml`{{"{{copy}}"}}
+
+        `oc get svc windows-ssh-nodeport`{{"{{execute}}"}}
+
+        Expect type **NodePort** and `22:30022/TCP`. Then capture a node IP:
+
+        `NODE_IP=$(oc get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')`{{"{{execute}}"}}
+
+        `echo $NODE_IP`{{"{{execute}}"}}
+
+        The node's `InternalIP` is the address you use to reach NodePort
+        services from outside the cluster. The `ExternalIP` field in
+        `oc get nodes -o wide` is only populated when an external cloud provider
+        assigns one.
+
+        **Option B: LoadBalancer Service.** If your cluster has a load balancer
+        provider (such as MetalLB), save this as `windows-ssh-lb-service.yaml`
+        instead:
+
+        ```yaml
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: windows-ssh-lb
+        spec:
+          type: LoadBalancer
+          selector:
+            vm.kubevirt.io/name: <your-windows-vm-name>
+          ports:
+            - protocol: TCP
+              port: 22
+              targetPort: 22
+        ```
+
+        `oc apply -f windows-ssh-lb-service.yaml`{{"{{copy}}"}}
+
+        `oc get svc windows-ssh-lb -w`{{"{{copy}}"}}
+
+        When `EXTERNAL-IP` shows an address, press **Ctrl+C** and use that IP
+        to connect. You only need one of these Service types for the walkthrough.
+      review:
+        instructions: "Do you have a NodePort or LoadBalancer Service selecting your Windows VM on port 22?"
+        failedTaskHelp: "Confirm the Service selector matches vm.kubevirt.io/name for your VirtualMachine and that you applied it in the VM's project."
+      summary:
+        success: "SSH is reachable through a Kubernetes Service."
+        failed: "Create and verify the Service before connecting."
+
+    - title: "Connect to the Windows VM via SSH"
+      description: |-
+        **Password authentication.** For a NodePort Service:
+
+        `ssh <windows-username>@$NODE_IP -p 30022`{{"{{copy}}"}}
+
+        For a LoadBalancer Service:
+
+        `ssh <windows-username>@<external-ip>`{{"{{copy}}"}}
+
+        Replace `<windows-username>` with your Windows account name (for
+        example, `Administrator`) and enter the password when prompted.
+
+        **virtctl SSH.** If you have cluster access and do not need external
+        exposure, SSH through the Kubernetes API server without a Service:
+
+        `virtctl ssh <windows-username>@<your-windows-vm-name>`{{"{{copy}}"}}
+
+        This uses API server port-forwarding to reach port 22 on the VM.
+      review:
+        instructions: "Can you open an SSH session to the Windows VM with a password or virtctl?"
+        failedTaskHelp: "Confirm port 22 is declared, sshd is running, the firewall profile is Any, the Service selector is correct, and you are using the right node or external IP and Windows credentials."
+      summary:
+        success: "You can reach the Windows guest over SSH."
+        failed: "Resolve connectivity before configuring key authentication."
+
+    - title: "Configure SSH key authentication"
+      description: |-
+        Password authentication works but is less secure. SSH keys remove the
+        need for interactive password entry and are required for automation
+        tools such as Ansible.
+
+        On your local machine, generate a key pair if you do not already have
+        one:
+
+        `ssh-keygen -t ed25519 -f ~/.ssh/windows-vm-key -N ""`{{"{{copy}}"}}
+
+        Display the public key so you can paste it into the guest:
+
+        `cat ~/.ssh/windows-vm-key.pub`{{"{{copy}}"}}
+
+        SSH into the Windows VM with password authentication, then run the
+        following in that session.
+
+        For a standard (non-administrator) user:
+
+        ```powershell
+        mkdir -Force $env:USERPROFILE\.ssh
+        # Paste your public key content into the authorized_keys file
+        Set-Content -Path "$env:USERPROFILE\.ssh\authorized_keys" -Value "ssh-ed25519 AAAA... your-key-here"
+        ```
+
+        For an Administrator account, Windows uses a separate file. Add the key
+        and restrict permissions so only Administrators and SYSTEM can read it:
+
+        ```powershell
+        Set-Content -Path "C:\ProgramData\ssh\administrators_authorized_keys" -Value "ssh-ed25519 AAAA... your-key-here"
+
+        icacls "C:\ProgramData\ssh\administrators_authorized_keys" /inheritance:r /grant "Administrators:F" /grant "SYSTEM:F"
+        ```
+
+        If `administrators_authorized_keys` permissions are too open, the SSH
+        server ignores the file and falls back to password authentication.
+
+        From your local machine, test key-based login (NodePort example):
+
+        `ssh -i ~/.ssh/windows-vm-key <windows-username>@$NODE_IP -p 30022`{{"{{copy}}"}}
+
+        If the connection succeeds without a password prompt, key authentication
+        is working.
+
+        With SSH configured, you can manage the Windows VM with Ansible over SSH
+        instead of WinRM. Example inventory:
+
+        ```ini
+        [windows]
+        windows-vm ansible_host=<NODE_IP> ansible_port=30022
+
+        [windows:vars]
+        ansible_user=Administrator
+        ansible_ssh_private_key_file=~/.ssh/windows-vm-key
+        ansible_shell_type=powershell
+        ansible_become_method=runas
+        ```
+
+        Test with `ansible windows -m ansible.windows.win_ping`. See the
+        [Ansible Windows SSH documentation](https://docs.ansible.com/ansible/latest/os_guide/intro_windows.html#windows-ssh-setup)
+        for more detail.
+      review:
+        instructions: "Can you SSH with your private key without a password prompt?"
+        failedTaskHelp: "Paste the full public key, use administrators_authorized_keys for Administrator accounts, and tighten ACLs with icacls. Recheck the key path on the client."
+      summary:
+        success: "Key-based SSH authentication works for the Windows VM."
+        failed: "Fix authorized_keys placement or permissions before finishing."
+
+    - title: "Clean up the SSH exposure resources"
+      description: |-
+        Remove the Services created in this walkthrough if you no longer need
+        external SSH access:
+
+        `oc delete svc windows-ssh-nodeport windows-ssh-lb --ignore-not-found`{{"{{execute}}"}}
+
+        To remove OpenSSH Server from the Windows VM, open **Administrator
+        PowerShell** in the guest and run:
+
+        ```powershell
+        Stop-Service sshd
+        Remove-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+        ```
+
+        Keep OpenSSH installed if you still need remote command-line access.
+      review:
+        instructions: "Did you either keep SSH intentionally, or delete the demo Services (and optionally remove OpenSSH)?"
+        failedTaskHelp: "Delete only the windows-ssh-nodeport / windows-ssh-lb Services from this walkthrough. Leave the Windows VM unless you intend to remove it separately."
+      summary:
+        success: "SSH exposure resources are retained intentionally or removed."
+        failed: "Finish the chosen retention or cleanup path."
+  conclusion: |-
+    You declared port 22 on the masquerade interface, installed and configured
+    OpenSSH Server, fixed the Windows Firewall profile for the Public masquerade
+    network, set PowerShell as the default SSH shell, exposed the guest with a
+    Service, and connected with password and key-based authentication.
+
+    The original
+    [Windows SSH cookbook tutorial](https://redhatquickcourses.github.io/ocp-virt-cookbook/ocp-virt-cookbook/1/vm-configuration/ssh-access-windows-vms.html)
+    provides additional context, including Ansible inventory examples and related
+    remote-access guides.
+{{- end }}
