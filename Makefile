@@ -89,12 +89,12 @@ check-pr-deploy: check-pr check-image
 	@command -v "$(CONTAINER_ENGINE)" >/dev/null 2>&1 || { printf 'Container engine %s is required.\n' "$(CONTAINER_ENGINE)" >&2; exit 2; }
 	@command -v "$(HELM)" >/dev/null 2>&1 || { printf 'Helm command %s is required.\n' "$(HELM)" >&2; exit 2; }
 
-deploy-pr: check-pr-deploy ## Check out PR, build and push its image, then deploy using the current kubeconfig context
+deploy-pr: check-pr-deploy ## Check out PR, build and push its image, then upgrade the default Helm release
 	@$(MAKE) checkout-pr PR="$(PR)"
 	@$(MAKE) release IMAGE="$(IMAGE)" \
 		KUBE_CONTEXT="$(KUBE_CONTEXT)" \
-		RELEASE="pr-$(PR)-quickstart" \
-		NAMESPACE="pr-$(PR)-quickstart"
+		RELEASE="$(RELEASE)" \
+		NAMESPACE="$(NAMESPACE)"
 
 lint: ## Run the repository lint scripts (yarn lint applies fixes)
 	$(YARN) lint
