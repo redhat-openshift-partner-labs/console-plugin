@@ -166,6 +166,17 @@ test.describe('Console plugin cards', () => {
     ).toBeVisible();
   });
 
+  test('opens the Windows SSH access quick start', async ({ page }) => {
+    await page.goto('/partner-labs-demos');
+    await page.getByTestId('card-action-ssh-access-windows-vms').click();
+    await expect(
+      page.getByRole('heading', { name: 'Connect to a Windows VM via SSH', exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText('Declare port 22 on the VM interface', { exact: true }),
+    ).toBeVisible();
+  });
+
   test('opens the VM network policies quick start', async ({ page }) => {
     await page.goto('/partner-labs-demos');
     await page.getByTestId('card-action-network-policies-vms').click();
