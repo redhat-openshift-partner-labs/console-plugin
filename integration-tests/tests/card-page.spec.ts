@@ -155,6 +155,15 @@ test.describe('Console plugin cards', () => {
     await expect(page.getByText('Understand VM and VMI resources', { exact: true })).toBeVisible();
   });
 
+  test('opens the live migration quick start', async ({ page }) => {
+    await page.goto('/partner-labs-demos');
+    await page.getByTestId('card-action-live-migration').click();
+    await expect(
+      page.getByRole('heading', { name: 'Live-migrate a virtual machine', exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText('Prepare the migration project', { exact: true })).toBeVisible();
+  });
+
   test('opens the Windows VirtIO drivers quick start', async ({ page }) => {
     await page.goto('/partner-labs-demos');
     await page.getByTestId('card-action-windows-vm-virtio-drivers').click();
