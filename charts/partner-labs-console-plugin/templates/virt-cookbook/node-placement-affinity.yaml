@@ -57,17 +57,10 @@ spec:
   tasks:
     - title: "Prepare the placement project"
       description: |-
-        List the nodes that OpenShift Virtualization can use:
+        List the nodes that OpenShift Virtualization can use and confirm that at
+        least two show **Ready** in the **STATUS** column:
 
         `oc get nodes -l kubevirt.io/schedulable=true -L kubernetes.io/hostname`{{"{{execute}}"}}
-
-        Confirm that at least two of those nodes are **Ready**:
-
-        ```
-        READY_NODE_COUNT=$(oc get nodes -l kubevirt.io/schedulable=true --no-headers | awk '$2 == "Ready" { count++ } END { print count + 0 }')
-        echo "Ready VM nodes: ${READY_NODE_COUNT}"
-        test "${READY_NODE_COUNT}" -ge 2
-        ```{{"{{execute}}"}}
 
         Create a dedicated project. Stop if it already exists so that earlier
         VMs cannot affect the affinity results:
