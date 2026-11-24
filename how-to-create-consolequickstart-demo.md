@@ -45,11 +45,11 @@ For example, `create-vm-web-console` is both card identifiers, the filename is
 `create-vm-web-console.yaml`, and the CR's `metadata.name` is
 `create-vm-web-console`. This is the repository naming convention; the SDK launch
 itself resolves the CR through `quickStartId`. Card IDs must also be unique across
-all card kinds, including cookbook cards.
+all card kinds.
 
 The card title and CR's `spec.displayName` are separate: the first appears in the
 gallery, the second in the Console walkthrough. A QuickStart card needs no new
-route, exposed module, or cookbook content file.
+route or exposed module.
 
 ## Add a demo
 

@@ -1,18 +1,14 @@
 # OpenShift Partner Labs Console Plugin
 
-This dynamic plugin demonstrates three ways a card can act in the OpenShift Console:
+This dynamic plugin demonstrates two ways a card can act in the OpenShift Console:
 
 | Interaction         | Cards                                                                                        | Implementation                                                                                |
 | ------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Open a plugin page  | Custom Page, How-to Use Demos, Creating Virtual Machines, Custom VM Templates                | `console-extensions.json`, `src/components/ExamplePage.tsx`, `src/cookbook/`                  |
 | Start a walkthrough | Create a VM from the web console, Create custom VM templates, VM Instancetypes & Preferences | `src/components/DemosPage.tsx`, `charts/partner-labs-console-plugin/templates/virt-cookbook/` |
 | Trigger a pipeline  | Tekton Pipeline                                                                              | `src/components/DemosPage.tsx`                                                                |
 
-`src/cards.yaml` is the sparse card registry. Each long cookbook body lives in
-`src/cookbook/content/`; `src/data/cards.ts` loads card metadata, and the cookbook
-page loads the matching content. The renderer, command runner, and content types
-live in `src/cookbook/`. More VM-specific
-`ConsoleQuickStart` chart templates for that cookbook belong in
+`src/cards.yaml` is the card registry, and `src/data/cards.ts` loads it.
+`ConsoleQuickStart` chart templates live in
 `charts/partner-labs-console-plugin/templates/virt-cookbook/`.
 
 To add a walkthrough card, follow the [ConsoleQuickStart demo wiring guide](how-to-create-consolequickstart-demo.md).
@@ -21,11 +17,6 @@ Use the project selector above the Demos tabs to change the active Console
 project. The pipeline runs in that project, and Activity shows its resources.
 Choose a specific project to enable the pipeline; **All projects** cannot run it.
 Project switching is disabled while a pipeline creation request is pending.
-
-The Custom Page demonstrates `useActiveNamespace`, `k8sListItems`,
-`useK8sWatchResource`, `useUserSettings`, `useQuickStartContext`, `ResourceLink`,
-and `Timestamp`. It shows copyable `oc` commands for the optional Web Terminal;
-the page itself reads resources through the Console SDK and does not execute a shell.
 
 The route `$codeRef` values in `console-extensions.json` must match
 `consolePlugin.exposedModules` in `package.json`. Run `yarn i18n` after changing
@@ -36,7 +27,6 @@ translated strings.
 ```mermaid
 flowchart LR
     nav["Optional: navigation link<br/>console-extensions.json"] --> url["Page URL"]
-    card["Optional: page card<br/>src/cards.yaml"] --> url
     url --> route["Route: path and $codeRef<br/>console-extensions.json"]
     route --> module["Exposed module with matching name<br/>package.json consolePlugin.exposedModules"]
     module --> page["React page component<br/>src/components/MyPage.tsx"]
@@ -44,8 +34,7 @@ flowchart LR
 
 Create the component, expose it under a name such as `MyPage`, and use that name
 as the route's `$codeRef`. The route's `path` is the URL to open. To make the page
-discoverable, add a navigation link or a `kind: page` card whose URL matches that
-path. `ExamplePage` at `/partner-labs-example` is the existing example.
+discoverable, add a navigation link whose `href` is that path.
 
 This repository can be used as a template. Use GitHub's **Use this template**
 action, then update plugin metadata, the i18n namespace, route paths, CSS

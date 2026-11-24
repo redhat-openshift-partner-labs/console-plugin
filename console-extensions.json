@@ -8,20 +8,6 @@
     }
   },
   {
-    "type": "console.page/route",
-    "properties": {
-      "path": "/partner-labs-example",
-      "component": { "$codeRef": "ExamplePage" }
-    }
-  },
-  {
-    "type": "console.page/route",
-    "properties": {
-      "path": "/partner-labs-demos/:demoId",
-      "component": { "$codeRef": "CookbookPage" }
-    }
-  },
-  {
     "type": "console.navigation/href",
     "properties": {
       "id": "partner-labs-demos",

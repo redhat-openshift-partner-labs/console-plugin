@@ -90,15 +90,6 @@ test.describe('Console plugin cards', () => {
     }
   });
 
-  test('opens the custom page card', async ({ page }) => {
-    await page.goto('/partner-labs-demos');
-    await page.getByTestId('card-action-page').click();
-    await expect(page).toHaveURL(/\/partner-labs-example$/);
-    await expect(page.getByRole('heading', { name: 'Custom Page' })).toBeVisible();
-    await expect(page.getByText('Console SDK examples')).toBeVisible();
-    await expect(page.getByTestId('copy-example-command')).toBeVisible();
-  });
-
   test('shows the project selector on the demos page', async ({ page }) => {
     await page.goto('/partner-labs-demos');
     await expect(page.locator('[data-test-id="namespace-bar-dropdown"]')).toBeVisible();
