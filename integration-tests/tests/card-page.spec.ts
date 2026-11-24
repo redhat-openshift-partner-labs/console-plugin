@@ -90,12 +90,6 @@ test.describe('Console plugin cards', () => {
     }
   });
 
-  test('shows the project selector on the demos page', async ({ page }) => {
-    await page.goto('/partner-labs-demos');
-    await expect(page.locator('[data-test-id="namespace-bar-dropdown"]')).toBeVisible();
-    await expect(page.getByTestId('card-pipeline')).toBeVisible();
-  });
-
   test('opens the VM creation quick start', async ({ page }) => {
     await page.goto('/partner-labs-demos');
     await page.getByTestId('card-action-create-vm-web-console').click();

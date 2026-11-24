@@ -1,22 +1,14 @@
 # OpenShift Partner Labs Console Plugin
 
-This dynamic plugin demonstrates two ways a card can act in the OpenShift Console:
-
-| Interaction         | Cards                                                                                        | Implementation                                                                                |
-| ------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Start a walkthrough | Create a VM from the web console, Create custom VM templates, VM Instancetypes & Preferences | `src/components/DemosPage.tsx`, `charts/partner-labs-console-plugin/templates/virt-cookbook/` |
-| Trigger a pipeline  | Tekton Pipeline                                                                              | `src/components/DemosPage.tsx`                                                                |
+This dynamic plugin adds a **Partner Labs Demos** page to the OpenShift Console.
+Each card on the page starts a `ConsoleQuickStart` walkthrough.
 
 `src/cards.yaml` is the card registry, and `src/data/cards.ts` loads it.
-`ConsoleQuickStart` chart templates live in
+`src/components/DemosPage.tsx` renders the gallery and starts the selected
+walkthrough. `ConsoleQuickStart` chart templates live in
 `charts/partner-labs-console-plugin/templates/virt-cookbook/`.
 
 To add a walkthrough card, follow the [ConsoleQuickStart demo wiring guide](how-to-create-consolequickstart-demo.md).
-
-Use the project selector above the Demos tabs to change the active Console
-project. The pipeline runs in that project, and Activity shows its resources.
-Choose a specific project to enable the pipeline; **All projects** cannot run it.
-Project switching is disabled while a pipeline creation request is pending.
 
 The route `$codeRef` values in `console-extensions.json` must match
 `consolePlugin.exposedModules` in `package.json`. Run `yarn i18n` after changing
@@ -50,12 +42,9 @@ prefix, and Helm values.
 - Node.js 24 and Yarn 4 for building the plugin. Use the version in `.nvmrc`
   for local development; the Docker image, CI, and devcontainer also use Node.js 24.
 - An OpenShift cluster and `oc` login for running it in the console.
-- OpenShift Pipelines for the Tekton card. The user needs permission to create
-  `PipelineRun` resources in the active namespace. The cluster must be able to
-  pull `registry.access.redhat.com/ubi9/ubi-minimal:latest`.
 
-The walkthrough card requires the `ConsoleQuickStart` resource installed by the
-Helm chart. Running only the local plugin server does not install that resource.
+Each card requires its `ConsoleQuickStart` resource, which the Helm chart
+installs. Running only the local plugin server does not install those resources.
 
 ## Develop
 
@@ -125,3 +114,25 @@ adapted from the VM cookbook's `vm-templates.adoc`. It covers CLI template
 inspection, baseline VM deployment, custom template registration, parameter
 processing, guest login, and cleanup of a dedicated tutorial project. Set
 `plugin.quickStarts.vm-templates.enabled=false` to omit its resource.
+
+### Upgrade from a version with pipeline and cookbook cards
+
+Earlier versions created cluster resources from the Demos page. This version has
+no page that lists or deletes them. List the labeled resources:
+
+```sh
+oc get virtualmachines --all-namespaces -l app.kubernetes.io/managed-by=partner-labs-console-plugin
+oc get pipelineruns --all-namespaces -l app.kubernetes.io/managed-by=partner-labs-console-plugin
+```
+
+Each command reports an unknown resource type when OpenShift Virtualization or
+OpenShift Pipelines is not installed.
+
+The cookbook pages also created these resources without that label:
+
+| Resource                              | Location                                        |
+| ------------------------------------- | ----------------------------------------------- |
+| Project `template-example`            | Cluster                                         |
+| Project `vm-cloning-demo`             | Cluster                                         |
+| `Template` `rhel9-custom`             | The project that was active when it was created |
+| `DataVolume` `webserver-clone-2-disk` | Project `vm-cloning-demo`                       |

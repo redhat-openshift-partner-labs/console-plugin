@@ -1,12 +1,3 @@
 .partner-labs-console-plugin__toolbar {
   margin: var(--pf-t--global--spacer--lg) 0;
 }
-
-.partner-labs-console-plugin__kind-scroll {
-  max-width: 100%;
-  overflow-x: auto;
-}
-
-.partner-labs-console-plugin__activity {
-  margin-top: var(--pf-t--global--spacer--lg);
-}
