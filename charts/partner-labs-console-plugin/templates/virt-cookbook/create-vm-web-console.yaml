@@ -190,7 +190,7 @@ spec:
     configurations that require full control. Custom templates let teams reuse
     approved configurations.
 
-    Continue with the **Custom VM Templates** cookbook card or the
+    Continue with the **Create custom VM templates** or
     **VM Instancetypes & Preferences** walkthrough in Partner Labs Demos.
   nextQuickStart: []
 {{- end }}
