@@ -297,7 +297,6 @@ spec:
       the guest and deletes the VMI
     - Run strategies control automatic VM startup and restart behavior
 
-    Continue with **Custom VM Templates** to learn how to define reusable VM configurations,
-    or explore the **VM Templates** cookbook card for advanced template customization.
+    Continue with **Create custom VM templates** to learn how to define reusable VM configurations.
   nextQuickStart: []
 {{- end }}
