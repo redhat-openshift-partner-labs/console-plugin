@@ -366,7 +366,6 @@ spec:
     credentials used for that deployment.
 
     Continue with **VM Instancetypes & Preferences** to explore reusable compute
-    profiles and OS settings, or use the **Custom VM Templates** cookbook card
-    for the full reference guide.
+    profiles and OS settings.
   nextQuickStart: []
 {{- end }}
