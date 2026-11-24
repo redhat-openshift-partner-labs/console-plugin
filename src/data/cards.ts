@@ -6,16 +6,11 @@ interface CardBase {
   body: string;
 }
 
-export type CookbookCard = CardBase & {
-  kind: 'cookbook' | 'general';
-};
-
 export type DemoCard = CardBase &
   (
     | { kind: 'page'; path: string }
     | { kind: 'quickstart'; quickStartId: string }
     | { kind: 'pipeline' }
-    | CookbookCard
   );
 
 const loadedCards = Array.isArray(cardsData) ? cardsData : cardsData.default;
@@ -25,7 +20,3 @@ if (!Array.isArray(loadedCards)) {
 }
 
 export const cards = loadedCards as DemoCard[];
-
-export const cookbookCards = cards.filter(
-  (card): card is CookbookCard => card.kind === 'cookbook' || card.kind === 'general',
-);

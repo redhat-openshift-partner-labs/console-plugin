@@ -267,7 +267,7 @@ describe('Helm and registry validation', () => {
   });
 
   it('rejects duplicate card IDs across kinds', () => {
-    cards.push({ id: 'alpha', kind: 'cookbook' });
+    cards.push({ id: 'alpha', kind: 'other' });
     writeRegistry();
     expect(() => validateQuickStarts(root)).toThrow('duplicate card ID alpha');
   });

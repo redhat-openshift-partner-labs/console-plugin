@@ -4,15 +4,12 @@ This dynamic plugin demonstrates three ways a card can act in the OpenShift Cons
 
 | Interaction         | Cards                                                                                        | Implementation                                                                                |
 | ------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Open a plugin page  | Custom Page, How-to Use Demos, Creating Virtual Machines, Custom VM Templates                | `console-extensions.json`, `src/components/ExamplePage.tsx`, `src/cookbook/`                  |
+| Open a plugin page  | Custom Page                                                                                  | `console-extensions.json`, `src/components/ExamplePage.tsx`                                   |
 | Start a walkthrough | Create a VM from the web console, Create custom VM templates, VM Instancetypes & Preferences | `src/components/DemosPage.tsx`, `charts/partner-labs-console-plugin/templates/virt-cookbook/` |
 | Trigger a pipeline  | Tekton Pipeline                                                                              | `src/components/DemosPage.tsx`                                                                |
 
-`src/cards.yaml` is the sparse card registry. Each long cookbook body lives in
-`src/cookbook/content/`; `src/data/cards.ts` loads card metadata, and the cookbook
-page loads the matching content. The renderer, command runner, and content types
-live in `src/cookbook/`. More VM-specific
-`ConsoleQuickStart` chart templates for that cookbook belong in
+`src/cards.yaml` is the card registry, and `src/data/cards.ts` loads it.
+`ConsoleQuickStart` chart templates live in
 `charts/partner-labs-console-plugin/templates/virt-cookbook/`.
 
 To add a walkthrough card, follow the [ConsoleQuickStart demo wiring guide](how-to-create-consolequickstart-demo.md).

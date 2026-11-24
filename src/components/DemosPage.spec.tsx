@@ -75,9 +75,6 @@ describe('DemosPage', () => {
     );
     expect(screen.getAllByTestId(/^card-(?!action)/)).toHaveLength(cards.length);
     expect(screen.getByText('Custom Page')).toBeInTheDocument();
-    expect(screen.getByText('How-to Use Demos')).toBeInTheDocument();
-    expect(screen.getByText('Creating Virtual Machines')).toBeInTheDocument();
-    expect(screen.getByText('Custom VM Templates')).toBeInTheDocument();
     expect(screen.getByText('Cloning Virtual Machines')).toBeInTheDocument();
     expect(screen.getByText('Cloud-init Fundamentals')).toBeInTheDocument();
     expect(screen.getByText('VM Instancetypes & Preferences')).toBeInTheDocument();
@@ -223,9 +220,10 @@ describe('DemosPage', () => {
         <DemosPage />
       </MemoryRouter>,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Cookbook' }));
-    expect(screen.getAllByTestId(/^card-(?!action)/)).toHaveLength(2);
-    expect(screen.getAllByText('Open cookbook')).toHaveLength(2);
+    const quickStartCount = cards.filter((card) => card.kind === 'quickstart').length;
+    fireEvent.click(screen.getByRole('button', { name: 'Walkthrough' }));
+    expect(screen.getAllByTestId(/^card-(?!action)/)).toHaveLength(quickStartCount);
+    expect(screen.getAllByText('Start walkthrough')).toHaveLength(quickStartCount);
     fireEvent.click(screen.getByRole('button', { name: 'All' }));
     expect(screen.getByText('Run in {{namespace}}')).toBeInTheDocument();
   });

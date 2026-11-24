@@ -4,21 +4,6 @@
   body: Explore Console SDK examples for live watches, saved settings, walkthroughs, resource queries, and Web Terminal commands.
   path: /partner-labs-example
 
-- id: how-to-use-demos
-  kind: general
-  title: How-to Use Demos
-  body: Learn how to navigate and use the Partner Labs Demos experience.
-
-- id: create-vm
-  kind: cookbook
-  title: Creating Virtual Machines
-  body: Create and manage virtual machines using the OpenShift web console and pre-built templates with OpenShift Virtualization.
-
-- id: vm-templates-cookbook
-  kind: cookbook
-  title: Custom VM Templates
-  body: Create and customize virtual machine templates for fast, repeatable deployments with predefined instance types, networking, and storage.
-
 - id: vm-instancetypes-and-preferences
   kind: quickstart
   title: VM Instancetypes & Preferences

@@ -88,8 +88,7 @@
     "description": "OpenShift Console plugin for OpenShift Partner Labs",
     "exposedModules": {
       "DemosPage": "./components/DemosPage",
-      "ExamplePage": "./components/ExamplePage",
-      "CookbookPage": "./cookbook/CookbookPage"
+      "ExamplePage": "./components/ExamplePage"
     },
     "dependencies": {
       "@console/pluginAPI": ">=4.19.0-0"
