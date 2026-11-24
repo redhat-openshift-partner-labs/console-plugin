@@ -4,9 +4,8 @@ import { ALL_NAMESPACES_KEY } from './namespace';
 export function getKinds(
   t: (key: string, options?: { namespace?: string }) => string,
   namespace: string,
-): Record<DemoCard['kind'], { label: string; action: string; color: 'blue' | 'teal' | 'orange' }> {
+): Record<DemoCard['kind'], { label: string; action: string; color: 'teal' | 'orange' }> {
   return {
-    page: { label: t('Page'), action: t('Open page'), color: 'blue' },
     quickstart: { label: t('Walkthrough'), action: t('Start walkthrough'), color: 'teal' },
     pipeline: {
       label: t('Pipeline'),

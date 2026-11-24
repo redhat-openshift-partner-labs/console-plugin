@@ -154,9 +154,6 @@ const DemosPageContent: FC = () => {
 
   const openCard = (card: DemoCard) => {
     switch (card.kind) {
-      case 'page':
-        navigate(card.path);
-        break;
       case 'quickstart':
         setActiveQuickStart?.(card.quickStartId);
         break;

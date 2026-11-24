@@ -4,7 +4,7 @@ This document provides context and guidelines for AI coding assistants working o
 
 ## Project Overview
 
-This repository demonstrates three OpenShift Console card interactions: opening a plugin page, starting a `ConsoleQuickStart`, and creating a Tekton `PipelineRun`. It can be used via GitHub's "Use this template" feature.
+This repository demonstrates two OpenShift Console card interactions: starting a `ConsoleQuickStart` and creating a Tekton `PipelineRun`. It can be used via GitHub's "Use this template" feature.
 
 **Key Technologies:**
 - TypeScript + React 17
@@ -68,7 +68,7 @@ return <h1>{t('Hello, World!')}</h1>;
 ```
 src/
   cards.yaml           # Sparse card registry
-  components/          # Card gallery and simple page
+  components/          # Card gallery
   data/cards.ts        # Typed card loader
 console-extensions.json # Plugin extension declarations
 package.json           # Plugin metadata in consolePlugin section

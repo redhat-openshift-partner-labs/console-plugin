@@ -7,11 +7,7 @@ interface CardBase {
 }
 
 export type DemoCard = CardBase &
-  (
-    | { kind: 'page'; path: string }
-    | { kind: 'quickstart'; quickStartId: string }
-    | { kind: 'pipeline' }
-  );
+  ({ kind: 'quickstart'; quickStartId: string } | { kind: 'pipeline' });
 
 const loadedCards = Array.isArray(cardsData) ? cardsData : cardsData.default;
 

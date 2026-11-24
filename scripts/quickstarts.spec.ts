@@ -214,7 +214,7 @@ describe('Helm and registry validation', () => {
     ) as typeof values;
     switches = { alpha: { enabled: true }, beta: { enabled: false } };
     cards = [
-      { id: 'page', kind: 'page' },
+      { id: 'other', kind: 'other' },
       ...['alpha', 'beta'].map((id) => ({ id, kind: 'quickstart', quickStartId: id })),
     ];
     writeRegistry();

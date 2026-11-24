@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Switch } from 'react-router-dom';
+import { MemoryRouter, Route } from 'react-router-dom';
 import { cards } from '../data/cards';
 
 let mockNamespace = 'demo';
@@ -74,7 +74,6 @@ describe('DemosPage', () => {
       </MemoryRouter>,
     );
     expect(screen.getAllByTestId(/^card-(?!action)/)).toHaveLength(cards.length);
-    expect(screen.getByText('Custom Page')).toBeInTheDocument();
     expect(screen.getByText('Cloning Virtual Machines')).toBeInTheDocument();
     expect(screen.getByText('Cloud-init Fundamentals')).toBeInTheDocument();
     expect(screen.getByText('VM Instancetypes & Preferences')).toBeInTheDocument();
@@ -101,19 +100,6 @@ describe('DemosPage', () => {
     const callsAfterLeavingActivity = sdk.useK8sWatchResources.mock.calls.length;
     fireEvent.click(screen.getByTestId('tab-activity'));
     expect(sdk.useK8sWatchResources.mock.calls.length).toBeGreaterThan(callsAfterLeavingActivity);
-  });
-
-  it('opens the page route', async () => {
-    render(
-      <MemoryRouter initialEntries={['/partner-labs-demos']}>
-        <Switch>
-          <Route exact path="/partner-labs-demos" component={DemosPage} />
-          <Route path="/partner-labs-example" render={() => <div data-test="example-route" />} />
-        </Switch>
-      </MemoryRouter>,
-    );
-    fireEvent.click(screen.getByTestId('card-action-page'));
-    expect(await screen.findByTestId('example-route')).toBeInTheDocument();
   });
 
   it.each(cards.filter((card) => card.kind === 'quickstart'))(

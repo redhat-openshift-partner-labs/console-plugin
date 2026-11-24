@@ -1,9 +1,3 @@
-- id: page
-  kind: page
-  title: Custom Page
-  body: Explore Console SDK examples for live watches, saved settings, walkthroughs, resource queries, and Web Terminal commands.
-  path: /partner-labs-example
-
 - id: vm-instancetypes-and-preferences
   kind: quickstart
   title: VM Instancetypes & Preferences
