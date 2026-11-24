@@ -1,3 +1,7 @@
 .partner-labs-console-plugin__toolbar {
   margin: var(--pf-t--global--spacer--lg) 0;
 }
+
+.partner-labs-console-plugin__activity {
+  margin-top: var(--pf-t--global--spacer--lg);
+}

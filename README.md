@@ -1,7 +1,15 @@
 # OpenShift Partner Labs Console Plugin
 
 This dynamic plugin adds a **Partner Labs Demos** page to the OpenShift Console.
-Each card on the page starts a `ConsoleQuickStart` walkthrough.
+The page has two tabs:
+
+| Tab      | Content                                                                                                                                                   |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Catalog  | One card per `ConsoleQuickStart` walkthrough, with a search box.                                                                                          |
+| Activity | The `VirtualMachine` and `PipelineRun` resources in the selected project that carry the label `app.kubernetes.io/managed-by=partner-labs-console-plugin`. |
+
+Use the project selector above the tabs to choose the project that Activity
+lists. Activity lists nothing while **All projects** is selected.
 
 `src/cards.yaml` is the card registry, and `src/data/cards.ts` loads it.
 `src/components/DemosPage.tsx` renders the gallery and starts the selected
@@ -117,8 +125,8 @@ processing, guest login, and cleanup of a dedicated tutorial project. Set
 
 ### Upgrade from a version with pipeline and cookbook cards
 
-Earlier versions created cluster resources from the Demos page. This version has
-no page that lists or deletes them. List the labeled resources:
+Earlier versions created cluster resources from the Demos page. The Activity tab
+lists the labeled ones one project at a time. List them across all projects:
 
 ```sh
 oc get virtualmachines --all-namespaces -l app.kubernetes.io/managed-by=partner-labs-console-plugin

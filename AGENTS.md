@@ -4,7 +4,7 @@ This document provides context and guidelines for AI coding assistants working o
 
 ## Project Overview
 
-This repository adds a Partner Labs Demos page to the OpenShift Console. Each card on the page starts a `ConsoleQuickStart` walkthrough. It can be used via GitHub's "Use this template" feature.
+This repository adds a Partner Labs Demos page to the OpenShift Console. Each card on the page starts a `ConsoleQuickStart` walkthrough, and an Activity tab lists labeled resources in the selected project. It can be used via GitHub's "Use this template" feature.
 
 **Key Technologies:**
 - TypeScript + React 17
@@ -68,7 +68,7 @@ return <h1>{t('Hello, World!')}</h1>;
 ```
 src/
   cards.yaml           # Sparse card registry
-  components/          # Card gallery
+  components/          # Card gallery and Activity tab
   data/cards.ts        # Typed card loader
 console-extensions.json # Plugin extension declarations
 package.json           # Plugin metadata in consolePlugin section

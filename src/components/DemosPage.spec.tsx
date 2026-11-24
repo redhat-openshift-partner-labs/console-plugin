@@ -7,6 +7,13 @@ jest.mock('@openshift-console/dynamic-plugin-sdk', () => {
   return {
     DocumentTitle: ({ children }: { children: React.ReactNode }) => <title>{children}</title>,
     ListPageHeader: ({ title }: { title: string }) => <h1>{title}</h1>,
+    NamespaceBar: () => <select aria-label="Project" />,
+    useActiveNamespace: () => ['demo'],
+    useK8sWatchResources: jest.fn(() => ({})),
+    useK8sModel: () => [undefined, false],
+    useListPageFilter: (data: unknown[]) => [data, data, jest.fn()],
+    ListPageFilter: () => null,
+    VirtualizedTable: () => null,
     useQuickStartContext: () => ({ setActiveQuickStart }),
     setActiveQuickStart,
   };
@@ -14,21 +21,23 @@ jest.mock('@openshift-console/dynamic-plugin-sdk', () => {
 
 import DemosPage from './DemosPage';
 
-const sdk = jest.requireMock<{ setActiveQuickStart: jest.Mock }>(
-  '@openshift-console/dynamic-plugin-sdk',
-);
+const sdk = jest.requireMock<{
+  setActiveQuickStart: jest.Mock;
+  useK8sWatchResources: jest.Mock;
+}>('@openshift-console/dynamic-plugin-sdk');
 
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
 describe('DemosPage', () => {
-  it('shows all demo cards', () => {
+  it('shows all demo cards and the project selector', () => {
     render(
       <MemoryRouter>
         <DemosPage />
       </MemoryRouter>,
     );
+    expect(screen.getByRole('combobox', { name: 'Project' })).toBeInTheDocument();
     expect(screen.getAllByTestId(/^card-(?!action)/)).toHaveLength(cards.length);
     expect(screen.getByText('Cloning Virtual Machines')).toBeInTheDocument();
     expect(screen.getByText('Cloud-init Fundamentals')).toBeInTheDocument();
@@ -40,6 +49,21 @@ describe('DemosPage', () => {
     expect(screen.getByText('Create a VM from the web console')).toBeInTheDocument();
     expect(screen.getByText('Create custom VM templates')).toBeInTheDocument();
     expect(screen.getByText('Understanding VM lifecycle states')).toBeInTheDocument();
+  });
+
+  it('mounts the Activity tab and its watches only when selected', () => {
+    render(
+      <MemoryRouter>
+        <DemosPage />
+      </MemoryRouter>,
+    );
+    expect(sdk.useK8sWatchResources).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('tab-activity'));
+    expect(sdk.useK8sWatchResources).toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('tab-catalog'));
+    const callsAfterLeavingActivity = sdk.useK8sWatchResources.mock.calls.length;
+    fireEvent.click(screen.getByTestId('tab-activity'));
+    expect(sdk.useK8sWatchResources.mock.calls.length).toBeGreaterThan(callsAfterLeavingActivity);
   });
 
   it.each(cards)('starts the ConsoleQuickStart from the $id card', ({ id, quickStartId }) => {
