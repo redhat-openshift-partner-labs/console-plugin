@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route } from 'react-router-dom';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { cards } from '../data/cards';
 
 let mockNamespace = 'demo';
@@ -9,11 +9,10 @@ jest.mock('@openshift-console/dynamic-plugin-sdk', () => {
   return {
     DocumentTitle: ({ children }: { children: React.ReactNode }) => <title>{children}</title>,
     ListPageHeader: ({ title }: { title: string }) => <h1>{title}</h1>,
-    NamespaceBar: ({ isDisabled }: { isDisabled?: boolean }) => (
+    NamespaceBar: () => (
       <select
         aria-label="Project"
         value={mockNamespace}
-        disabled={isDisabled}
         onChange={(event) => {
           mockNamespace = event.target.value;
         }}
@@ -32,8 +31,6 @@ jest.mock('@openshift-console/dynamic-plugin-sdk', () => {
     ListPageFilter: () => null,
     VirtualizedTable: () => null,
     useQuickStartContext: () => ({ setActiveQuickStart }),
-    k8sCreate: jest.fn().mockResolvedValue({}),
-    k8sGet: jest.fn().mockRejectedValue({ code: 404 }),
     setActiveQuickStart,
   };
 });
@@ -41,29 +38,13 @@ jest.mock('@openshift-console/dynamic-plugin-sdk', () => {
 import DemosPage from './DemosPage';
 
 const sdk = jest.requireMock<{
-  k8sCreate: jest.Mock<
-    Promise<unknown>,
-    [
-      {
-        ns: string;
-        data: {
-          kind: string;
-          metadata: { name: string; namespace: string; labels: Record<string, string> };
-          spec: { pipelineSpec: unknown; taskRunTemplate: { serviceAccountName: string } };
-        };
-      },
-    ]
-  >;
   setActiveQuickStart: jest.Mock;
-  k8sGet: jest.Mock;
   useK8sWatchResources: jest.Mock;
 }>('@openshift-console/dynamic-plugin-sdk');
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockNamespace = 'demo';
-  sdk.k8sCreate.mockResolvedValue({});
-  sdk.k8sGet.mockRejectedValue({ code: 404 });
 });
 
 describe('DemosPage', () => {
@@ -84,7 +65,6 @@ describe('DemosPage', () => {
     expect(screen.getByText('Create a VM from the web console')).toBeInTheDocument();
     expect(screen.getByText('Create custom VM templates')).toBeInTheDocument();
     expect(screen.getByText('Understanding VM lifecycle states')).toBeInTheDocument();
-    expect(screen.getByText('Tekton Pipeline')).toBeInTheDocument();
   });
 
   it('mounts the Activity tab and its watches only when selected', () => {
@@ -102,82 +82,14 @@ describe('DemosPage', () => {
     expect(sdk.useK8sWatchResources.mock.calls.length).toBeGreaterThan(callsAfterLeavingActivity);
   });
 
-  it.each(cards.filter((card) => card.kind === 'quickstart'))(
-    'starts the ConsoleQuickStart from the $id card',
-    ({ id, quickStartId }) => {
-      render(
-        <MemoryRouter>
-          <DemosPage />
-        </MemoryRouter>,
-      );
-      fireEvent.click(screen.getByTestId(`card-action-${id}`));
-      expect(sdk.setActiveQuickStart).toHaveBeenCalledWith(quickStartId);
-    },
-  );
-
-  it('creates an inline Tekton PipelineRun', async () => {
+  it.each(cards)('starts the ConsoleQuickStart from the $id card', ({ id, quickStartId }) => {
     render(
       <MemoryRouter>
         <DemosPage />
       </MemoryRouter>,
     );
-    fireEvent.click(screen.getByTestId('card-action-pipeline'));
-    await waitFor(() => {
-      expect(sdk.k8sCreate).toHaveBeenCalledTimes(1);
-    });
-    const request = sdk.k8sCreate.mock.calls[0][0];
-    expect(request.ns).toBe('demo');
-    expect(request.data.kind).toBe('PipelineRun');
-    expect(request.data.spec.pipelineSpec).toBeDefined();
-    expect(request.data.spec.taskRunTemplate.serviceAccountName).toBe('default');
-    expect(request.data.metadata.name).toBe('partner-labs-demo');
-    expect(request.data.metadata.labels).toEqual({
-      'app.kubernetes.io/managed-by': 'partner-labs-console-plugin',
-    });
-    expect(screen.getByTestId('toast-pipeline')).toBeInTheDocument();
-    expect(screen.getByTestId('activity-tab')).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('tab-catalog'));
-    expect(screen.getByText('View run')).toBeInTheDocument();
-  });
-
-  it('opens Activity without creating another run when the card run exists', async () => {
-    sdk.k8sGet.mockResolvedValue({
-      metadata: {
-        name: 'partner-labs-demo',
-        labels: { 'app.kubernetes.io/managed-by': 'partner-labs-console-plugin' },
-      },
-    });
-    render(
-      <MemoryRouter>
-        <DemosPage />
-      </MemoryRouter>,
-    );
-    fireEvent.click(screen.getByTestId('card-action-pipeline'));
-    expect(await screen.findByTestId('activity-tab')).toBeInTheDocument();
-    expect(sdk.k8sCreate).not.toHaveBeenCalled();
-  });
-
-  it('allows a new run after the tracked run is deleted', async () => {
-    sdk.k8sGet
-      .mockResolvedValueOnce({
-        metadata: {
-          name: 'partner-labs-demo',
-          labels: { 'app.kubernetes.io/managed-by': 'partner-labs-console-plugin' },
-        },
-      })
-      .mockRejectedValueOnce({ code: 404 });
-    render(
-      <MemoryRouter>
-        <DemosPage />
-      </MemoryRouter>,
-    );
-    fireEvent.click(screen.getByTestId('card-action-pipeline'));
-    await screen.findByTestId('activity-tab');
-    fireEvent.click(screen.getByTestId('tab-catalog'));
-    fireEvent.click(screen.getByTestId('card-action-pipeline'));
-    await waitFor(() => {
-      expect(sdk.k8sCreate).toHaveBeenCalledTimes(1);
-    });
+    fireEvent.click(screen.getByTestId(`card-action-${id}`));
+    expect(sdk.setActiveQuickStart).toHaveBeenCalledWith(quickStartId);
   });
 
   it('filters by title and body, then clears the empty result', () => {
@@ -206,123 +118,10 @@ describe('DemosPage', () => {
         <DemosPage />
       </MemoryRouter>,
     );
-    const walkthroughs = cards.filter((card) => card.kind === 'quickstart').length;
     fireEvent.click(screen.getByRole('button', { name: 'Walkthrough' }));
-    expect(screen.getAllByTestId(/^card-(?!action)/)).toHaveLength(walkthroughs);
-    expect(screen.getAllByText('Start walkthrough')).toHaveLength(walkthroughs);
+    expect(screen.getAllByTestId(/^card-(?!action)/)).toHaveLength(cards.length);
+    expect(screen.getAllByText('Start walkthrough')).toHaveLength(cards.length);
     fireEvent.click(screen.getByRole('button', { name: 'All' }));
-    expect(screen.getByText('Run in {{namespace}}')).toBeInTheDocument();
-  });
-
-  it('disables the pipeline card while creation is pending', () => {
-    sdk.k8sCreate.mockImplementation(() => new Promise(() => undefined));
-    render(
-      <MemoryRouter>
-        <DemosPage />
-      </MemoryRouter>,
-    );
-    fireEvent.click(screen.getByTestId('card-action-pipeline'));
-    expect(screen.getByTestId('card-action-pipeline')).toBeDisabled();
-    expect(screen.getByRole('combobox', { name: 'Project' })).toBeDisabled();
-    expect(screen.getByText('Creating…')).toBeInTheDocument();
-  });
-
-  it('links to the namespace where the run was created', async () => {
-    const { rerender } = render(
-      <MemoryRouter initialEntries={['/partner-labs-demos']}>
-        <Route exact path="/partner-labs-demos" component={DemosPage} />
-        <Route
-          path="/k8s/ns/:namespace/:resource/:name"
-          render={({ match }) => <span data-test="run-detail">{match.params.namespace}</span>}
-        />
-      </MemoryRouter>,
-    );
-    fireEvent.click(screen.getByTestId('card-action-pipeline'));
-    await screen.findByTestId('toast-pipeline');
-    mockNamespace = 'other';
-    rerender(
-      <MemoryRouter initialEntries={['/partner-labs-demos']}>
-        <Route exact path="/partner-labs-demos" component={DemosPage} />
-        <Route
-          path="/k8s/ns/:namespace/:resource/:name"
-          render={({ match }) => <span data-test="run-detail">{match.params.namespace}</span>}
-        />
-      </MemoryRouter>,
-    );
-    fireEvent.click(screen.getByTestId('view-pipeline-run'));
-    expect(await screen.findByTestId('run-detail')).toHaveTextContent('demo');
-  });
-
-  it('disables the pipeline in All projects', () => {
-    mockNamespace = '#ALL_NS#';
-    render(
-      <MemoryRouter>
-        <DemosPage />
-      </MemoryRouter>,
-    );
-    expect(screen.getByTestId('card-action-pipeline')).toBeDisabled();
-    expect(screen.getByRole('combobox', { name: 'Project' })).toBeEnabled();
-    expect(screen.getByText('Select a project to run')).toBeInTheDocument();
-    expect(sdk.k8sGet).not.toHaveBeenCalled();
-  });
-
-  it('runs the pipeline in the project selected on the demos page', async () => {
-    mockNamespace = '#ALL_NS#';
-    const page = (
-      <MemoryRouter>
-        <DemosPage />
-      </MemoryRouter>
-    );
-    const { rerender } = render(page);
-    fireEvent.change(screen.getByRole('combobox', { name: 'Project' }), {
-      target: { value: 'other' },
-    });
-    // Console updates subscribers to useActiveNamespace after a project change.
-    rerender(
-      <MemoryRouter>
-        <DemosPage />
-      </MemoryRouter>,
-    );
-    expect(screen.getByTestId('card-action-pipeline')).toBeEnabled();
-    fireEvent.click(screen.getByTestId('card-action-pipeline'));
-    await screen.findByTestId('toast-pipeline');
-    expect(sdk.k8sGet).toHaveBeenCalledWith(
-      expect.objectContaining({ ns: 'other', name: 'partner-labs-demo' }),
-    );
-    const request = sdk.k8sCreate.mock.calls[0][0];
-    expect(request.ns).toBe('other');
-    expect(request.data.metadata.namespace).toBe('other');
-    expect(screen.getByRole('combobox', { name: 'Project' })).toBeEnabled();
-  });
-
-  it('shows View run when the fixed run exists', async () => {
-    sdk.k8sGet.mockResolvedValue({
-      metadata: {
-        name: 'partner-labs-demo',
-        labels: { 'app.kubernetes.io/managed-by': 'partner-labs-console-plugin' },
-      },
-    });
-    render(
-      <MemoryRouter>
-        <DemosPage />
-      </MemoryRouter>,
-    );
-    fireEvent.click(screen.getByTestId('card-action-pipeline'));
-    expect(await screen.findByText('PipelineRun already exists')).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('tab-catalog'));
-    expect(screen.getByText('View run')).toBeInTheDocument();
-  });
-
-  it('closes the creation error toast', async () => {
-    sdk.k8sGet.mockRejectedValue({ code: 403 });
-    render(
-      <MemoryRouter>
-        <DemosPage />
-      </MemoryRouter>,
-    );
-    fireEvent.click(screen.getByTestId('card-action-pipeline'));
-    expect(await screen.findByTestId('toast-create-error')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /Close Danger alert/ }));
-    expect(screen.queryByTestId('toast-create-error')).not.toBeInTheDocument();
+    expect(screen.getAllByTestId(/^card-(?!action)/)).toHaveLength(cards.length);
   });
 });

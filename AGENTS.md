@@ -4,7 +4,7 @@ This document provides context and guidelines for AI coding assistants working o
 
 ## Project Overview
 
-This repository demonstrates two OpenShift Console card interactions: starting a `ConsoleQuickStart` and creating a Tekton `PipelineRun`. It can be used via GitHub's "Use this template" feature.
+This repository adds a Partner Labs Demos page to the OpenShift Console. Each card on the page starts a `ConsoleQuickStart` walkthrough. It can be used via GitHub's "Use this template" feature.
 
 **Key Technologies:**
 - TypeScript + React 17
