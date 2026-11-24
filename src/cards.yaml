@@ -117,9 +117,3 @@
   title: Control VM node placement and affinity
   body: Pin VMs to selected nodes, co-locate related VMs, and separate VMs for availability.
   quickStartId: node-placement-affinity
-
-- id: pipeline
-  kind: pipeline
-  title: Tekton Pipeline
-  body: Create and watch a simple Tekton PipelineRun in the active project. Delete it from Activity to run it again.
-

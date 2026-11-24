@@ -1,13 +1,12 @@
 import * as cardsData from '../cards.yaml';
 
-interface CardBase {
+export interface DemoCard {
   id: string;
+  kind: 'quickstart';
   title: string;
   body: string;
+  quickStartId: string;
 }
-
-export type DemoCard = CardBase &
-  ({ kind: 'quickstart'; quickStartId: string } | { kind: 'pipeline' });
 
 const loadedCards = Array.isArray(cardsData) ? cardsData : cardsData.default;
 

@@ -1,11 +1,8 @@
 # OpenShift Partner Labs Console Plugin
 
-This dynamic plugin demonstrates two ways a card can act in the OpenShift Console:
-
-| Interaction         | Cards                                                                                        | Implementation                                                                                |
-| ------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Start a walkthrough | Create a VM from the web console, Create custom VM templates, VM Instancetypes & Preferences | `src/components/DemosPage.tsx`, `charts/partner-labs-console-plugin/templates/virt-cookbook/` |
-| Trigger a pipeline  | Tekton Pipeline                                                                              | `src/components/DemosPage.tsx`                                                                |
+This dynamic plugin adds a **Partner Labs Demos** page to the OpenShift Console.
+Each card on the page starts a `ConsoleQuickStart` walkthrough from
+`src/components/DemosPage.tsx`.
 
 `src/cards.yaml` is the card registry, and `src/data/cards.ts` loads it.
 `ConsoleQuickStart` chart templates live in
@@ -14,9 +11,8 @@ This dynamic plugin demonstrates two ways a card can act in the OpenShift Consol
 To add a walkthrough card, follow the [ConsoleQuickStart demo wiring guide](how-to-create-consolequickstart-demo.md).
 
 Use the project selector above the Demos tabs to change the active Console
-project. The pipeline runs in that project, and Activity shows its resources.
-Choose a specific project to enable the pipeline; **All projects** cannot run it.
-Project switching is disabled while a pipeline creation request is pending.
+project. Activity shows the labeled resources in that project; **All projects**
+shows none.
 
 The route `$codeRef` values in `console-extensions.json` must match
 `consolePlugin.exposedModules` in `package.json`. Run `yarn i18n` after changing
@@ -50,9 +46,6 @@ prefix, and Helm values.
 - Node.js 24 and Yarn 4 for building the plugin. Use the version in `.nvmrc`
   for local development; the Docker image, CI, and devcontainer also use Node.js 24.
 - An OpenShift cluster and `oc` login for running it in the console.
-- OpenShift Pipelines for the Tekton card. The user needs permission to create
-  `PipelineRun` resources in the active namespace. The cluster must be able to
-  pull `registry.access.redhat.com/ubi9/ubi-minimal:latest`.
 
 The walkthrough card requires the `ConsoleQuickStart` resource installed by the
 Helm chart. Running only the local plugin server does not install that resource.
