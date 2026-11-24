@@ -154,13 +154,6 @@ const DemosPageContent: FC = () => {
 
   const openCard = (card: DemoCard) => {
     switch (card.kind) {
-      case 'page':
-        navigate(card.path);
-        break;
-      case 'cookbook':
-      case 'general':
-        navigate(`/partner-labs-demos/${card.id}`);
-        break;
       case 'quickstart':
         setActiveQuickStart?.(card.quickStartId);
         break;
