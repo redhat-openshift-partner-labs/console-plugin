@@ -2,8 +2,12 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './integration-tests/tests',
-  timeout: 30000,
+  globalSetup: './integration-tests/global-setup.ts',
+  globalTeardown: './integration-tests/global-teardown.ts',
+  timeout: 60000,
+  expect: { timeout: 10000 },
   retries: 1,
+  outputDir: 'integration-tests/results/artifacts',
   use: {
     baseURL: process.env.BRIDGE_BASE_ADDRESS ?? 'http://localhost:9000',
     viewport: { width: 1920, height: 1080 },

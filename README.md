@@ -83,6 +83,25 @@ unit tests, Quick Start validation, and the plugin build. Note that the existing
 `yarn lint` script applies fixes, so `make lint` and `make check` can update
 files.
 
+### End-to-end tests on OKD
+
+The **E2E on OKD** workflow runs the same Playwright suite against a temporary
+OKD cluster created by
+[crc-org/crc-github-action](https://github.com/crc-org/crc-github-action) with
+`preset: okd`. It does not need the `OCP_PULL_SECRET` secret. CRC uses a dummy
+pull secret and downloads the OKD bundle from Quay.
+
+The workflow runs on demand and on pull requests. Use the `crc-version` input
+to select a CRC version. The default is `2.65.0`. The workflow disables the
+chart's console patcher job because the OKD cluster uses a dummy pull secret.
+It patches the console operator directly instead.
+
+The workflow builds the plugin image in a separate job, passes it to the test
+job as a workflow artifact, and loads it into the CRC VM with `podman load`.
+It does not use GHCR.
+
+A run takes about 30 to 60 minutes.
+
 ## Deploy
 
 Build, push, and deploy an image in order with `make release`:

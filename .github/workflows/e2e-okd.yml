@@ -1,0 +1,252 @@
+name: E2E on OKD
+
+on:
+  workflow_dispatch:
+    inputs:
+      crc-version:
+        description: CRC version to run with the OKD preset
+        type: string
+        default: '2.65.0'
+  pull_request:
+    types: [opened, reopened, synchronize, labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-okd-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  image:
+    name: Build plugin image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      PLUGIN_IMAGE: localhost/partner-labs-console-plugin:e2e
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build the plugin image
+        env:
+          DOCKER_BUILDKIT: '1'
+        run: docker build --platform linux/amd64 --tag "$PLUGIN_IMAGE" .
+
+      - name: Export the plugin image
+        run: docker save "$PLUGIN_IMAGE" --output plugin-image.tar
+
+      - name: Upload the plugin image
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: plugin-image
+          path: plugin-image.tar
+          retention-days: 1
+
+  playwright:
+    name: Playwright on OKD
+    needs: image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: node .yarn/releases/yarn-4.18.0.cjs install --immutable
+
+      - name: Free disk space
+        uses: palmsoftware/quick-cleanup@7265cfd58b2a08299d81b75bd66f12cb46ad8dec # v0.0.7
+        with:
+          cleanup-mode: aggressive
+          minimum-free-space: 25
+
+      - name: Create swap
+        run: |
+          if ! swapon --show | grep -q '/mnt/swapfile'; then
+            sudo fallocate -l 8G /mnt/swapfile ||
+              sudo dd if=/dev/zero of=/mnt/swapfile bs=1M count=8192 status=none
+            sudo chmod 600 /mnt/swapfile
+            sudo mkswap /mnt/swapfile
+            sudo swapon /mnt/swapfile
+          fi
+          free -h
+
+      - name: Move CRC data to the larger disk
+        run: |
+          mkdir -p "$HOME/.crc"
+          sudo mkdir -p /mnt/crc-cache /mnt/crc-machines
+          sudo chown -R "$USER:$USER" /mnt/crc-cache /mnt/crc-machines
+          if [ ! -L "$HOME/.crc/cache" ]; then
+            rm -rf "$HOME/.crc/cache"
+            ln -s /mnt/crc-cache "$HOME/.crc/cache"
+          fi
+          if [ ! -L "$HOME/.crc/machines" ]; then
+            rm -rf "$HOME/.crc/machines"
+            ln -s /mnt/crc-machines "$HOME/.crc/machines"
+          fi
+          ls -la "$HOME/.crc"
+          df -h / /mnt
+
+      - name: Enable KVM access
+        run: |
+          sudo usermod -a -G kvm "$USER" || true
+          sudo setfacl -m u:"$USER":rw /dev/kvm 2>/dev/null || true
+          ls -l /dev/kvm || true
+
+      - name: Protect the CRC VM from the OOM killer
+        run: |
+          nohup bash -c '
+            for _ in $(seq 1 720); do
+              pid=$(pgrep -f -- "-name guest=crc" | head -1)
+              if [ -n "$pid" ]; then
+                echo -500 | sudo tee "/proc/$pid/oom_score_adj" >/dev/null 2>&1 || true
+                exit 0
+              fi
+              sleep 5
+            done
+          ' >/tmp/crc-oom-watchdog.log 2>&1 &
+          echo "OOM watchdog started"
+
+      # The action uses CRC's OKD preset and its dummy default pull secret.
+      # CRC then downloads the OKD bundle from Quay, so no OCP_PULL_SECRET is
+      # needed. Keep cache disabled because its cache path would collide with
+      # the symlinks above.
+      - name: Deploy OKD with CRC
+        id: crc
+        uses: crc-org/crc-github-action@466b8741bd91b9ee59f37db92b69f285cacada41 # v1.0.1
+        with:
+          preset: okd
+          cpus: 4
+          memory: 10752
+          disk: 40
+          version: ${{ github.event.inputs['crc-version'] || '2.65.0' }}
+          cache: false
+
+      - name: Show cluster version
+        run: |
+          crc version || true
+          oc version || true
+          oc get clusterversion version -o wide || true
+
+      - name: Wait for the web console
+        run: |
+          oc wait --for=condition=Available clusteroperator/authentication --timeout=600s
+          oc wait --for=condition=Available clusteroperator/console --timeout=600s
+          oc wait --for=create deployment/console -n openshift-console --timeout=600s
+          oc wait --for=condition=Available deployment/console \
+            -n openshift-console --timeout=600s
+          oc get crd consoleplugins.console.openshift.io consolequickstarts.console.openshift.io
+          oc get route console -n openshift-console
+
+      - name: Configure cluster access
+        id: okd
+        run: |
+          console_url=""
+          for _ in {1..60}; do
+            if console_url=$(oc whoami --show-console 2>/dev/null) && [ -n "$console_url" ]; then
+              break
+            fi
+            sleep 10
+          done
+          test -n "$console_url"
+          password=$(cat "$HOME/.crc/machines/crc/kubeadmin-password" 2>/dev/null || true)
+          if [ -z "$password" ]; then
+            password=$(crc console --credentials 2>/dev/null |
+              sed -n "s/.*-u kubeadmin -p \([^ ]*\).*/\1/p" | head -1)
+          fi
+          test -n "$password"
+          echo "::add-mask::$password"
+          echo "console-url=$console_url" >> "$GITHUB_OUTPUT"
+          echo "kubeadmin-password=$password" >> "$GITHUB_OUTPUT"
+
+      - name: Check console connectivity
+        env:
+          CONSOLE_URL: ${{ steps.okd.outputs.console-url }}
+        run: |
+          getent hosts api.crc.testing
+          getent hosts oauth-openshift.apps-crc.testing
+          for _ in {1..24}; do
+            if curl --insecure --fail --silent --show-error --head "$CONSOLE_URL"; then
+              exit 0
+            fi
+            sleep 5
+          done
+          getent hosts console-openshift-console.apps-crc.testing || true
+          cat /etc/hosts
+          exit 1
+
+      # Download after the long CRC setup so disk cleanup and the cluster
+      # startup cannot remove the artifact.
+      - name: Download the plugin image
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: plugin-image
+          path: ${{ runner.temp }}
+
+      - name: Load the plugin image into the cluster
+        env:
+          PLUGIN_IMAGE_TAR: ${{ runner.temp }}/plugin-image.tar
+        run: |
+          test -f "$PLUGIN_IMAGE_TAR"
+          CRC_IP=$(crc ip)
+          test -n "$CRC_IP"
+          # CRC exposes the VM SSH server on 127.0.0.1:2222 in user mode.
+          # Newer CRC releases generate id_ed25519; older ones use id_ecdsa.
+          SSH_KEY="$HOME/.crc/machines/crc/id_ed25519"
+          if [ ! -f "$SSH_KEY" ]; then
+            SSH_KEY="$HOME/.crc/machines/crc/id_ecdsa"
+          fi
+          if [ ! -f "$SSH_KEY" ]; then
+            echo "CRC SSH key not found"
+            ls -la "$HOME/.crc/machines/crc" || true
+            exit 1
+          fi
+          SSH_PORT=22
+          if [ "$CRC_IP" = "127.0.0.1" ]; then
+            SSH_PORT=2222
+          fi
+          SCP_OPTS=(-i "$SSH_KEY" -P "$SSH_PORT" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes)
+          SSH_OPTS=(-i "$SSH_KEY" -p "$SSH_PORT" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes)
+          scp "${SCP_OPTS[@]}" "$PLUGIN_IMAGE_TAR" "core@$CRC_IP:/tmp/plugin-image.tar"
+          ssh "${SSH_OPTS[@]}" "core@$CRC_IP" \
+            "sudo podman load -i /tmp/plugin-image.tar && rm -f /tmp/plugin-image.tar && sudo crictl images | grep 'localhost/partner-labs-console-plugin'"
+
+      - uses: azure/setup-helm@2f5e7bc67f1f9972ab16657bb795f36d8f04de0e # v5.1.0
+        with:
+          version: v4.3.2
+
+      - name: Install Playwright Chromium
+        run: node .yarn/releases/yarn-4.18.0.cjs exec playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        env:
+          BRIDGE_BASE_ADDRESS: ${{ steps.okd.outputs.console-url }}
+          BRIDGE_KUBEADMIN_PASSWORD: ${{ steps.okd.outputs.kubeadmin-password }}
+          PLUGIN_TEMPLATE_PULL_SPEC: localhost/partner-labs-console-plugin:e2e
+          PLUGIN_SKIP_PATCH_JOB: 'true'
+        run: node .yarn/releases/yarn-4.18.0.cjs test-e2e-headless --workers=1
+
+      - name: Collect cluster diagnostics
+        if: failure()
+        run: |
+          oc get nodes -o wide || true
+          oc get pods -A -o wide || true
+          oc logs -n partner-labs-console-plugin deployment/partner-labs-console-plugin --tail=200 || true
+          oc get events -A --sort-by=.lastTimestamp | tail -50 || true
+
+      - name: Upload Playwright results
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-results-okd
+          path: integration-tests/results
+          if-no-files-found: ignore
+          retention-days: 7

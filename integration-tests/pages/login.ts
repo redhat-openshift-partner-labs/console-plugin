@@ -14,7 +14,15 @@ export class LoginPage {
   constructor(private readonly page: Page) {}
 
   private async isAuthDisabled() {
-    return this.page.evaluate(() => window.SERVER_FLAGS?.authDisabled);
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      try {
+        await this.page.waitForLoadState('domcontentloaded').catch(() => undefined);
+        return await this.page.evaluate(() => window.SERVER_FLAGS?.authDisabled);
+      } catch {
+        // The page navigated while evaluating; wait for the next document.
+      }
+    }
+    return undefined;
   }
 
   // Fill a field via CDP to avoid exposing the value in Playwright traces

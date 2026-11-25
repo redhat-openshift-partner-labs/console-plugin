@@ -97,6 +97,7 @@ integration-tests/     # Playwright e2e tests
 - `yarn test` - runs Jest unit tests
 - `yarn test-e2e` - opens Playwright in headed mode
 - `yarn test-e2e-headless` - runs Playwright in headless mode
+- The `E2E on OKD` workflow runs Playwright on a temporary OKD cluster without `OCP_PULL_SECRET`
 - Add e2e tests for new pages/features
 
 ## TypeScript Configuration
