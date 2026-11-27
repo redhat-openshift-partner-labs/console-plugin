@@ -1,0 +1,252 @@
+# Adapted from the OpenShift Virtualization Cookbook:
+# https://github.com/RedHatQuickCourses/ocp-virt-cookbook/blob/0b5802f8a8b7083b85e027519a826edab4cb3bf3/modules/vm-lifecycle/pages/live-migration.adoc
+#
+# MIT License
+# Copyright (c) 2025 OpenShift Virtualization Cookbook
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+{{- if (index .Values.plugin.quickStarts "live-migration").enabled }}
+apiVersion: console.openshift.io/v1
+kind: ConsoleQuickStart
+metadata:
+  name: live-migration
+  labels:
+    {{- include "partner-labs-console-plugin.labels" . | nindent 4 }}
+spec:
+  displayName: "Live-migrate a virtual machine"
+  description: "Move a running virtual machine to another node and verify that the migration completed without stopping the guest."
+  durationMinutes: 20
+  tags:
+    - virtualization
+    - migration
+    - availability
+  prerequisites:
+    - "OpenShift 4.19+ with OpenShift Virtualization installed"
+    - "At least two Ready nodes labeled kubevirt.io/schedulable=true"
+    - "Capacity for one VM with 1 vCPU and 1 GiB of memory"
+    - "An existing StorageClass that supports ReadWriteMany volumes"
+    - "A Fedora DataSource in openshift-virtualization-os-images"
+    - "Permission to list nodes and create and delete projects and VirtualMachines"
+    - "The kubevirt.io:migrate role in the demo project, or cluster administrator access"
+    - "An authenticated oc CLI and virtctl; Run controls require the Web Terminal Operator"
+  introduction: |-
+    Move a running virtual machine between compute nodes while its guest keeps
+    running. The disposable VM uses a Fedora boot disk on an existing shared
+    `ReadWriteMany` StorageClass, so both nodes can access the disk. You will
+    verify that the VM is migratable, start a migration, and confirm that it
+    completed on a different node.
+
+    Tasks to complete: prepare the project; create the VM; confirm migration
+    readiness; migrate and verify the VM; remove the demo resources.
+  tasks:
+    - title: "Prepare the migration project"
+      description: |-
+        List the nodes that OpenShift Virtualization can use:
+
+        `oc get nodes -l kubevirt.io/schedulable=true -L kubernetes.io/hostname`{{"{{execute}}"}}
+
+        Confirm that at least two of those nodes are **Ready**:
+
+        ```
+        READY_NODE_COUNT=$(oc get nodes -l kubevirt.io/schedulable=true --no-headers | awk '$2 == "Ready" { count++ } END { print count + 0 }')
+        echo "Ready VM nodes: ${READY_NODE_COUNT}"
+        test "${READY_NODE_COUNT}" -ge 2
+        ```{{"{{execute}}"}}
+
+        Create a dedicated project. If the project already exists, finish or
+        remove the earlier demo before continuing.
+
+        `oc create namespace live-migration-demo`{{"{{execute}}"}}
+
+        Confirm that your identity can create migration requests in the project:
+
+        `oc auth can-i create virtualmachineinstancemigrations.kubevirt.io -n live-migration-demo`{{"{{execute}}"}}
+
+        Expect `yes`. A cluster administrator can grant the `kubevirt.io:migrate`
+        role in this project if needed.
+
+        List the cluster's StorageClasses, then ask your administrator which
+        existing class supports `ReadWriteMany` volumes:
+
+        `oc get storageclass`{{"{{execute}}"}}
+
+        Set the class name in the Web Terminal. Replace the placeholder before
+        you run the command:
+
+        `export RWX_STORAGE_CLASS=CHANGE_ME_RWX_STORAGE_CLASS`{{"{{copy}}"}}
+
+        Confirm that the selected StorageClass exists:
+
+        `test "${RWX_STORAGE_CLASS}" != CHANGE_ME_RWX_STORAGE_CLASS && oc get storageclass "${RWX_STORAGE_CLASS}"`{{"{{execute}}"}}
+      review:
+        instructions: "Are at least two VM-capable nodes Ready, is live-migration-demo new and empty, can you create migration requests, and did you select an existing RWX-capable StorageClass?"
+        failedTaskHelp: "Ask an administrator to check OpenShift Virtualization node placement, node readiness, the kubevirt.io:migrate role, your project permissions, and which installed StorageClass supports ReadWriteMany volumes."
+      summary:
+        success: "The VM-capable nodes, migration project, and shared StorageClass are ready."
+        failed: "Prepare two Ready VM nodes, an empty project, and shared RWX storage before continuing."
+
+    - title: "Create the migratable VM"
+      description: |-
+        Create a Fedora VM with pod networking and a persistent boot disk on the
+        selected RWX StorageClass. The `LiveMigrate` eviction strategy also
+        allows a node drain to migrate this VM instead of shutting it down.
+
+        ```
+        oc create -n live-migration-demo -f - <<YAML
+        apiVersion: kubevirt.io/v1
+        kind: VirtualMachine
+        metadata:
+          name: live-migration-vm
+          labels:
+            app.kubernetes.io/managed-by: partner-labs-console-plugin
+        spec:
+          runStrategy: Always
+          template:
+            metadata:
+              labels:
+                kubevirt.io/domain: live-migration-vm
+                app.kubernetes.io/managed-by: partner-labs-console-plugin
+            spec:
+              evictionStrategy: LiveMigrate
+              domain:
+                cpu:
+                  cores: 1
+                memory:
+                  guest: 1Gi
+                devices:
+                  disks:
+                    - name: rootdisk
+                      disk:
+                        bus: virtio
+                  interfaces:
+                    - name: default
+                      masquerade: {}
+              networks:
+                - name: default
+                  pod: {}
+              volumes:
+                - name: rootdisk
+                  dataVolume:
+                    name: live-migration-vm-disk
+          dataVolumeTemplates:
+            - metadata:
+                name: live-migration-vm-disk
+              spec:
+                sourceRef:
+                  kind: DataSource
+                  name: fedora
+                  namespace: openshift-virtualization-os-images
+                storage:
+                  accessModes:
+                    - ReadWriteMany
+                  resources:
+                    requests:
+                      storage: 30Gi
+                  storageClassName: ${RWX_STORAGE_CLASS}
+        YAML
+        ```{{"{{execute}}"}}
+
+        Wait for the VM to become ready:
+
+        `oc wait -n live-migration-demo vm/live-migration-vm --for=condition=Ready --timeout=300s`{{"{{execute}}"}}
+
+        Display its current node:
+
+        `oc get vm,vmi -n live-migration-demo -o wide`{{"{{execute}}"}}
+      review:
+        instructions: "Is live-migration-vm Ready with a Running VMI assigned to a node?"
+        failedTaskHelp: "Run `oc describe vm live-migration-vm -n live-migration-demo` and inspect `oc get events -n live-migration-demo --sort-by=.lastTimestamp`. Check image access, quota, and VM node capacity."
+      summary:
+        success: "The migration VM is running on its source node."
+        failed: "Resolve VM startup or scheduling errors before continuing."
+
+    - title: "Confirm migration readiness"
+      description: |-
+        Wait for the VMI to report that it can be live-migrated:
+
+        `oc wait -n live-migration-demo vmi/live-migration-vm --for=condition=LiveMigratable --timeout=120s`{{"{{execute}}"}}
+
+        Inspect the condition and migration method:
+
+        `oc get vmi live-migration-vm -n live-migration-demo -o jsonpath='LiveMigratable: {range .status.conditions[?(@.type=="LiveMigratable")]}{.status} {.reason}{end}{"\n"}Method: {.status.migrationMethod}{"\n"}Current node: {.status.nodeName}{"\n"}'`{{"{{execute}}"}}
+
+        Expect **LiveMigratable: True** and **Method: LiveMigration**. The shared
+        RWX disk remains attached while the guest memory and device state move
+        to the target node.
+      review:
+        instructions: "Does the VMI report LiveMigratable True, Method LiveMigration, and a current node?"
+        failedTaskHelp: "Inspect the full condition with `oc get vmi live-migration-vm -n live-migration-demo -o yaml`. Confirm that the boot PVC is ReadWriteMany. Pod bridge networking, host-specific devices, or non-shared persistent disks can prevent migration."
+      summary:
+        success: "The VMI is ready to migrate."
+        failed: "Resolve the LiveMigratable condition before starting a migration."
+
+    - title: "Migrate and verify the VM"
+      description: |-
+        Start a migration with `virtctl`:
+
+        `virtctl migrate live-migration-vm -n live-migration-demo`{{"{{execute}}"}}
+
+        Find the migration object created by `virtctl`, then wait for it to
+        succeed:
+
+        ```
+        MIGRATION_NAME=$(oc get virtualmachineinstancemigrations -n live-migration-demo --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1:].metadata.name}')
+        echo "Migration: ${MIGRATION_NAME}"
+        test -n "${MIGRATION_NAME}"
+        oc wait -n live-migration-demo "virtualmachineinstancemigration/${MIGRATION_NAME}" --for=jsonpath='{.status.phase}'=Succeeded --timeout=300s
+        ```{{"{{execute}}"}}
+
+        Confirm the migration phase:
+
+        `oc get virtualmachineinstancemigration "${MIGRATION_NAME}" -n live-migration-demo -o custom-columns=NAME:.metadata.name,PHASE:.status.phase,VMI:.spec.vmiName`{{"{{execute}}"}}
+
+        Compare the recorded source and target nodes and verify completion:
+
+        ```
+        SOURCE_NODE=$(oc get vmi live-migration-vm -n live-migration-demo -o jsonpath='{.status.migrationState.sourceNode}')
+        TARGET_NODE=$(oc get vmi live-migration-vm -n live-migration-demo -o jsonpath='{.status.migrationState.targetNode}')
+        oc get vmi live-migration-vm -n live-migration-demo -o jsonpath='Source: {.status.migrationState.sourceNode}{"\n"}Target: {.status.migrationState.targetNode}{"\n"}Completed: {.status.migrationState.completed}{"\n"}Failed: {.status.migrationState.failed}{"\n"}'
+        test -n "${SOURCE_NODE}" && test -n "${TARGET_NODE}" && test "${SOURCE_NODE}" != "${TARGET_NODE}"
+        ```{{"{{execute}}"}}
+
+        Expect different source and target nodes, **Completed: true**, and no
+        value for **Failed**. The VM remains Running throughout the migration.
+      review:
+        instructions: "Did the migration succeed with different source and target nodes and Completed true?"
+        failedTaskHelp: "Run `oc describe virtualmachineinstancemigration ${MIGRATION_NAME} -n live-migration-demo`, inspect the VMI condition, and check namespace events. Confirm that another VM-capable node has enough CPU and memory."
+      summary:
+        success: "The running VM moved successfully to another node."
+        failed: "Inspect the migration object and cluster capacity before retrying."
+
+    - title: "Remove the demo resources"
+      description: |-
+        Delete the project and its VM and migration objects:
+
+        `oc delete namespace live-migration-demo`{{"{{execute}}"}}
+
+        Wait for the project to be removed:
+
+        `oc wait namespace/live-migration-demo --for=delete --timeout=180s`{{"{{execute}}"}}
+      review:
+        instructions: "Was the live-migration-demo namespace removed?"
+        failedTaskHelp: "Run `oc get namespace live-migration-demo` and inspect namespace conditions if deletion is still in progress."
+      summary:
+        success: "You removed the live migration demo resources."
+        failed: "The demo namespace still exists."
+{{- end }}
