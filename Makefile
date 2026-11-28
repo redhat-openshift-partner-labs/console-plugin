@@ -6,9 +6,9 @@ CONTAINER_ENGINE ?= podman
 IMAGE_REGISTRY ?=
 IMAGE ?= $(if $(and $(strip $(IMAGE_REGISTRY)),$(strip $(PR))),$(patsubst %/,%,$(IMAGE_REGISTRY))/pr-$(PR)-quickstart:latest)
 PLATFORM ?= linux/amd64
-RELEASE ?= partner-labs-console-plugin
-NAMESPACE ?= partner-labs-console-plugin
-CHART ?= charts/partner-labs-console-plugin
+RELEASE ?= console-demos-ocp-virtualization
+NAMESPACE ?= console-demos-ocp-virtualization
+CHART ?= charts/console-demos-ocp-virtualization
 KUBE_CONTEXT ?=
 PR ?=
 
@@ -19,7 +19,7 @@ help: ## List available targets
 	@printf '%s\n' '  IMAGE_REGISTRY=<registry>/<namespace>  Registry prefix for PR images (for example, quay.io/your-namespace).'
 	@printf '%s\n' '  PLATFORM=...                     Defaults to linux/amd64; override to choose another build platform.'
 	@printf '%s\n' '  CONTAINER_ENGINE=...              Defaults to podman; set to docker to use Docker.'
-	@printf '%s\n' '  RELEASE=... NAMESPACE=...        Helm release and namespace (defaults to partner-labs-console-plugin).'
+	@printf '%s\n' '  RELEASE=... NAMESPACE=...        Helm release and namespace (defaults to console-demos-ocp-virtualization).'
 	@printf '%s\n' '  CHART=... KUBE_CONTEXT=...        Chart path and optional Helm context override.'
 	@printf '%s\n' '  PR=<number>                      Required by checkout-pr and deploy-pr.'
 	@printf '%s\n' '  YARN=... HELM=... GH=...          Optional overrides for the corresponding CLI commands.'

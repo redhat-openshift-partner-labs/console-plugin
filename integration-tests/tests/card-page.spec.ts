@@ -91,12 +91,12 @@ test.describe('Console plugin cards', () => {
   });
 
   test('shows the project selector on the demos page', async ({ page }) => {
-    await page.goto('/partner-labs-demos');
+    await page.goto('/console-demos-ocp-virtualization');
     await expect(page.locator('[data-test-id="namespace-bar-dropdown"]')).toBeVisible();
   });
 
   test('opens the VM creation quick start', async ({ page }) => {
-    await page.goto('/partner-labs-demos');
+    await page.goto('/console-demos-ocp-virtualization');
     await page.getByTestId('card-action-create-vm-web-console').click();
     await expect(
       page.getByRole('heading', { name: 'Create a VM from the web console', exact: true }),
@@ -107,7 +107,7 @@ test.describe('Console plugin cards', () => {
   });
 
   test('opens the OpenShift Virtualization installation quick start', async ({ page }) => {
-    await page.goto('/partner-labs-demos');
+    await page.goto('/console-demos-ocp-virtualization');
     await page.getByTestId('card-action-install-configure-ocpv-operator').click();
     await expect(
       page.getByRole('heading', {
@@ -119,7 +119,7 @@ test.describe('Console plugin cards', () => {
   });
 
   test('opens the Windows golden images quick start', async ({ page }) => {
-    await page.goto('/partner-labs-demos');
+    await page.goto('/console-demos-ocp-virtualization');
     await page.getByTestId('card-action-windows-golden-images').click();
     await expect(
       page.getByRole('heading', { name: 'Create Windows golden images', exact: true }),
@@ -128,7 +128,7 @@ test.describe('Console plugin cards', () => {
   });
 
   test('opens the VM ingress routes quick start', async ({ page }) => {
-    await page.goto('/partner-labs-demos');
+    await page.goto('/console-demos-ocp-virtualization');
     await page.getByTestId('card-action-vm-ingress-routes').click();
     await expect(
       page.getByRole('heading', { name: 'Expose a VM with an HTTPS Route', exact: true }),
@@ -137,7 +137,7 @@ test.describe('Console plugin cards', () => {
   });
 
   test('opens the VM lifecycle states quick start', async ({ page }) => {
-    await page.goto('/partner-labs-demos');
+    await page.goto('/console-demos-ocp-virtualization');
     await page.getByTestId('card-action-vm-lifecycle-states').click();
     await expect(
       page.getByRole('heading', { name: 'Understanding VM lifecycle states', exact: true }),
@@ -146,7 +146,7 @@ test.describe('Console plugin cards', () => {
   });
 
   test('opens the Windows VirtIO drivers quick start', async ({ page }) => {
-    await page.goto('/partner-labs-demos');
+    await page.goto('/console-demos-ocp-virtualization');
     await page.getByTestId('card-action-windows-vm-virtio-drivers').click();
     await expect(
       page.getByRole('heading', { name: 'Install Windows with VirtIO drivers', exact: true }),
@@ -157,7 +157,7 @@ test.describe('Console plugin cards', () => {
   });
 
   test('opens the Windows SSH access quick start', async ({ page }) => {
-    await page.goto('/partner-labs-demos');
+    await page.goto('/console-demos-ocp-virtualization');
     await page.getByTestId('card-action-ssh-access-windows-vms').click();
     await expect(
       page.getByRole('heading', { name: 'Connect to a Windows VM via SSH', exact: true }),
@@ -168,7 +168,7 @@ test.describe('Console plugin cards', () => {
   });
 
   test('opens the VM network policies quick start', async ({ page }) => {
-    await page.goto('/partner-labs-demos');
+    await page.goto('/console-demos-ocp-virtualization');
     await page.getByTestId('card-action-network-policies-vms').click();
     await expect(
       page.getByRole('heading', { name: 'VM Cookbook: Network Policies for VMs', exact: true }),
@@ -179,7 +179,7 @@ test.describe('Console plugin cards', () => {
   });
 
   test('opens the static IP configuration quick start', async ({ page }) => {
-    await page.goto('/partner-labs-demos');
+    await page.goto('/console-demos-ocp-virtualization');
     await page.getByTestId('card-action-static-ip-configuration').click();
     await expect(
       page.getByRole('heading', { name: 'VM Cookbook: Static IP Configuration', exact: true }),
@@ -188,7 +188,7 @@ test.describe('Console plugin cards', () => {
   });
 
   test('opens the LVM Storage Operator quick start', async ({ page }) => {
-    await page.goto('/partner-labs-demos');
+    await page.goto('/console-demos-ocp-virtualization');
     await page.getByTestId('card-action-install-lvm-storage-operator').click();
     await expect(
       page.getByRole('heading', {
@@ -200,7 +200,7 @@ test.describe('Console plugin cards', () => {
   });
 
   test('opens the CLI YAML VM quick start', async ({ page }) => {
-    await page.goto('/partner-labs-demos');
+    await page.goto('/console-demos-ocp-virtualization');
     await page.getByTestId('card-action-create-vm-cli-yaml').click();
     await expect(
       page.getByRole('heading', { name: 'Create a VM with CLI YAML', exact: true }),
@@ -211,7 +211,7 @@ test.describe('Console plugin cards', () => {
   });
 
   test('opens the virtctl basics quick start', async ({ page }) => {
-    await page.goto('/partner-labs-demos');
+    await page.goto('/console-demos-ocp-virtualization');
     await page.getByTestId('card-action-virtctl-basics').click();
     await expect(
       page.getByRole('heading', { name: 'Using virtctl for VM management', exact: true }),
@@ -220,7 +220,7 @@ test.describe('Console plugin cards', () => {
   });
 
   test('opens the multi-disk configuration quick start', async ({ page }) => {
-    await page.goto('/partner-labs-demos');
+    await page.goto('/console-demos-ocp-virtualization');
     await page.getByTestId('card-action-multi-disk-configuration').click();
     await expect(
       page.getByRole('heading', { name: 'Configure multiple VM disks', exact: true }),
@@ -231,7 +231,7 @@ test.describe('Console plugin cards', () => {
   });
 
   test('opens the custom VM templates quick start', async ({ page }) => {
-    await page.goto('/partner-labs-demos');
+    await page.goto('/console-demos-ocp-virtualization');
     await page.getByTestId('card-action-vm-templates').click();
     await expect(
       page.getByRole('heading', { name: 'Create custom VM templates', exact: true }),
@@ -240,7 +240,7 @@ test.describe('Console plugin cards', () => {
   });
 
   test('opens the Cloud-init Fundamentals quick start', async ({ page }) => {
-    await page.goto('/partner-labs-demos');
+    await page.goto('/console-demos-ocp-virtualization');
     await page.getByTestId('card-action-cloud-init-fundamentals').click();
     await expect(
       page.getByRole('heading', { name: 'Cloud-init Fundamentals', exact: true }),
@@ -249,7 +249,7 @@ test.describe('Console plugin cards', () => {
   });
 
   test('opens the VM monitoring and metrics quick start', async ({ page }) => {
-    await page.goto('/partner-labs-demos');
+    await page.goto('/console-demos-ocp-virtualization');
     await page.getByTestId('card-action-vm-monitoring-metrics').click();
     await expect(
       page.getByRole('heading', { name: 'Monitor VM performance and metrics', exact: true }),
@@ -258,9 +258,9 @@ test.describe('Console plugin cards', () => {
   });
 
   test('opens the VM export and import walkthrough', async ({ page }) => {
-    await page.goto('/partner-labs-demos');
+    await page.goto('/console-demos-ocp-virtualization');
     await page.getByTestId('card-action-vm-export-import').click();
-    await expect(page).toHaveURL((url) => url.pathname === '/partner-labs-demos');
+    await expect(page).toHaveURL((url) => url.pathname === '/console-demos-ocp-virtualization');
     await expect(
       page.getByRole('heading', {
         name: 'Exporting and Importing VMs for Cross-Cluster Mobility',
@@ -290,7 +290,7 @@ test.describe('Console plugin cards', () => {
   });
 
   test('opens the node placement and affinity quick start', async ({ page }) => {
-    await page.goto('/partner-labs-demos');
+    await page.goto('/console-demos-ocp-virtualization');
     await page.getByTestId('card-action-node-placement-affinity').click();
     await expect(
       page.getByRole('heading', {

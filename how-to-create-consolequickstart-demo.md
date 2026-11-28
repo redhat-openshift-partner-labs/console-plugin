@@ -34,8 +34,8 @@ flowchart TB
 | Card registry        | [`src/cards.yaml`](src/cards.yaml)                                                        | `kind: quickstart` selects the launch behavior; `quickStartId` identifies the CR.          |
 | Card type and loader | [`src/data/cards.ts`](src/data/cards.ts)                                                  | Loads the registry into the plugin bundle as `DemoCard[]`.                                 |
 | Launch handler       | [`src/components/DemosPage.tsx`](src/components/DemosPage.tsx)                            | Calls `setActiveQuickStart?.(card.quickStartId)` through the SDK's `useQuickStartContext`. |
-| CR templates         | [`templates/virt-cookbook/`](charts/partner-labs-console-plugin/templates/virt-cookbook/) | Helm installs the VM walkthrough resources.                                                |
-| Install switches     | [`values.yaml`](charts/partner-labs-console-plugin/values.yaml)                           | `plugin.quickStarts.<name>.enabled` controls whether each CR is rendered.                  |
+| CR templates         | [`templates/virt-cookbook/`](charts/console-demos-ocp-virtualization/templates/virt-cookbook/) | Helm installs the VM walkthrough resources.                                                |
+| Install switches     | [`values.yaml`](charts/console-demos-ocp-virtualization/values.yaml)                           | `plugin.quickStarts.<name>.enabled` controls whether each CR is rendered.                  |
 
 **Use one name for all four identifiers:** the card's `id`, its `quickStartId`,
 the manifest filename `<name>.yaml`, and the CR's `metadata.name`. Use that same
@@ -54,7 +54,7 @@ route or exposed module.
 ## Add a demo
 
 1. Copy an existing CR template, such as
-   [`vm-templates.yaml`](charts/partner-labs-console-plugin/templates/virt-cookbook/vm-templates.yaml).
+   [`vm-templates.yaml`](charts/console-demos-ocp-virtualization/templates/virt-cookbook/vm-templates.yaml).
    For a VM demo, save it as `templates/virt-cookbook/my-demo.yaml`. Set
    `metadata.name` and the Helm condition to `my-demo`, then replace the walkthrough content.
    Preserve the chart label helper. For `my-demo`, the condition is:
@@ -92,8 +92,8 @@ Running `yarn start` alone does not install the CR on your development cluster.
 Render the new template and confirm the installed resource:
 
 ```sh
-helm template partner-labs-console-plugin charts/partner-labs-console-plugin \
-  --set plugin.image=quay.io/my-repository/partner-labs-console-plugin:latest \
+helm template console-demos-ocp-virtualization charts/console-demos-ocp-virtualization \
+  --set plugin.image=quay.io/my-repository/console-demos-ocp-virtualization:latest \
   --show-only templates/virt-cookbook/my-demo.yaml
 oc get consolequickstart my-demo
 ```
@@ -104,7 +104,7 @@ from the registry automatically. Add an opening check
 in [`card-page.spec.ts`](integration-tests/tests/card-page.spec.ts), following
 the existing QuickStart tests: click `card-action-my-demo`, then assert
 the walkthrough heading and initial content. Run `yarn test` and verify the card
-at `/partner-labs-demos` against a cluster with the CR installed.
+at `/console-demos-ocp-virtualization` against a cluster with the CR installed.
 
 Setting `plugin.quickStarts.my-demo.enabled=false` omits the CR but leaves its
 card in the bundle. The gallery does not check whether the CR exists. If a card
