@@ -1,8 +1,12 @@
 import * as cardsData from '../cards.yaml';
+import type { TopicId } from './topics';
 
 export interface DemoCard {
   id: string;
   kind: 'quickstart';
+  topic: TopicId;
+  // Equal to the ConsoleQuickStart's spec.durationMinutes; scripts/quickstarts.ts checks it.
+  durationMinutes: number;
   title: string;
   body: string;
   quickStartId: string;

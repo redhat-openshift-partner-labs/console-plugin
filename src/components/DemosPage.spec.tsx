@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { cards } from '../data/cards';
+import { getTopics, TOPIC_IDS } from '../data/topics';
 
 let mockNamespace = 'demo';
 
@@ -112,15 +113,24 @@ describe('DemosPage', () => {
     expect(screen.getAllByTestId(/^card-(?!action)/)).toHaveLength(cards.length);
   });
 
-  it('filters by kind and displays each action in the footer', () => {
+  it('filters by topic and displays each action in the footer', () => {
     render(
       <MemoryRouter>
         <DemosPage />
       </MemoryRouter>,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Walkthrough' }));
-    expect(screen.getAllByTestId(/^card-(?!action)/)).toHaveLength(cards.length);
     expect(screen.getAllByText('Start walkthrough')).toHaveLength(cards.length);
+    // Without an i18n instance, t() returns the key, so the duration pill shows the raw key.
+    expect(screen.getByTestId('card-vm-export-import')).toHaveTextContent('{{minutes}} min');
+    const topics = getTopics((key) => key);
+    for (const topic of TOPIC_IDS) {
+      fireEvent.click(screen.getByRole('button', { name: topics[topic].label }));
+      const expected = cards.filter((card) => card.topic === topic);
+      expect(expected.length).toBeGreaterThan(0);
+      expect(screen.getAllByTestId(/^card-(?!action)/)).toHaveLength(expected.length);
+      for (const card of expected)
+        expect(screen.getByTestId(`card-${card.id}`)).toBeInTheDocument();
+    }
     fireEvent.click(screen.getByRole('button', { name: 'All' }));
     expect(screen.getAllByTestId(/^card-(?!action)/)).toHaveLength(cards.length);
   });

@@ -2,7 +2,7 @@
   margin: var(--pf-t--global--spacer--lg) 0;
 }
 
-.console-demos-ocp-virtualization__kind-scroll {
+.console-demos-ocp-virtualization__topic-scroll {
   max-width: 100%;
   overflow-x: auto;
 }

@@ -1,9 +1,7 @@
 import type { DemoCard } from './cards';
 
-export function getKinds(
-  t: (key: string) => string,
-): Record<DemoCard['kind'], { label: string; action: string; color: 'teal' }> {
+export function getKinds(t: (key: string) => string): Record<DemoCard['kind'], { action: string }> {
   return {
-    quickstart: { label: t('Walkthrough'), action: t('Start walkthrough'), color: 'teal' },
+    quickstart: { action: t('Start walkthrough') },
   };
 }
