@@ -83,30 +83,6 @@ To add a walkthrough card, follow the
 [ConsoleQuickStart demo wiring guide](how-to-create-consolequickstart-demo.md).
 Run `yarn i18n` after changing translated strings.
 
-### Create a plugin page
-
-![Create a plugin page: an optional navigation link resolves to the page URL, the URL to a route with a path and $codeRef, the $codeRef to an exposed module in package.json, and the module to a React component.](docs/images/create-plugin-page.svg)
-
-<details>
-<summary>Diagram source</summary>
-
-```mermaid
-flowchart LR
-    nav["Navigation link, optional<br/>href is the page URL<br/>console.navigation/href<br/>console-extensions.json"] --> url["Page URL<br/>the route path a user opens"]
-    url --> route["Route<br/>path and $codeRef<br/>console.page/route<br/>console-extensions.json"]
-    route --> module["Exposed module<br/>key equals the route $codeRef<br/>consolePlugin.exposedModules<br/>package.json"]
-    module --> page["Page component<br/>React function component<br/>src/components/MyPage.tsx"]
-    %% $codeRef must equal the exposedModules key in package.json
-    %% console-extensions.json changes require restarting yarn start
-    %% Run yarn i18n after adding translated strings
-```
-
-</details>
-
-Create the component, expose it under a name such as `MyPage`, and use that name
-as the route's `$codeRef`. The route's `path` is the URL to open. To make the page
-discoverable, add a navigation link whose `href` is that path.
-
 ### Use as a template
 
 This repository can be used as a template. Use GitHub's **Use this template**
