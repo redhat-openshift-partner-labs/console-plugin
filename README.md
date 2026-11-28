@@ -1,12 +1,12 @@
 # OpenShift Partner Labs Console Plugin
 
-This dynamic plugin adds a **Partner Labs Demos** page to the OpenShift Console.
+This dynamic plugin adds a **Virtualization Demos** page to the OpenShift Console.
 Each card on the page starts a `ConsoleQuickStart` walkthrough from
 `src/components/DemosPage.tsx`.
 
 `src/cards.yaml` is the card registry, and `src/data/cards.ts` loads it.
 `ConsoleQuickStart` chart templates live in
-`charts/partner-labs-console-plugin/templates/virt-cookbook/`.
+`charts/console-demos-ocp-virtualization/templates/virt-cookbook/`.
 
 To add a walkthrough card, follow the [ConsoleQuickStart demo wiring guide](how-to-create-consolequickstart-demo.md).
 
@@ -58,7 +58,7 @@ yarn start
 ```
 
 After `oc login`, run `yarn start-console` in another terminal and open
-<http://localhost:9000/partner-labs-demos>.
+<http://localhost:9000/console-demos-ocp-virtualization>.
 
 Run `make help` to see the available workflows. `make check` runs linting,
 unit tests, Quick Start validation, and the plugin build. Note that the existing
@@ -70,7 +70,7 @@ files.
 Build, push, and deploy an image in order with `make release`:
 
 ```sh
-make release IMAGE=quay.io/your-namespace/partner-labs-console-plugin:latest
+make release IMAGE=quay.io/your-namespace/console-demos-ocp-virtualization:latest
 ```
 
 The `build`, `push`, and `deploy` targets are also available individually;
@@ -78,7 +78,7 @@ The `build`, `push`, and `deploy` targets are also available individually;
 Podman; set `CONTAINER_ENGINE=docker` to use Docker. The build platform defaults
 to `linux/amd64`, which is useful when building for amd64 OpenShift nodes from
 Apple Silicon. The release and namespace default to
-`partner-labs-console-plugin`; override them with `RELEASE` and `NAMESPACE`.
+`console-demos-ocp-virtualization`; override them with `RELEASE` and `NAMESPACE`.
 Set `KUBE_CONTEXT` to select a specific cluster context for deployment.
 
 Deploy a pull request to a test cluster with one target:
@@ -89,7 +89,7 @@ make deploy-pr PR=50 IMAGE_REGISTRY=quay.io/your-namespace
 
 This checks out the PR, builds and pushes
 `quay.io/your-namespace/pr-50-quickstart:latest`, then upgrades the default Helm
-release and namespace (`partner-labs-console-plugin`). Cluster-scoped chart
+release and namespace (`console-demos-ocp-virtualization`). Cluster-scoped chart
 resources such as `ConsolePlugin` keep that fixed name, so a separate PR release
 cannot adopt them. Deploy uses Helm `--take-ownership` so existing
 `ConsoleQuickStart` and related objects without Helm annotations can be adopted

@@ -4,7 +4,7 @@ This document provides context and guidelines for AI coding assistants working o
 
 ## Project Overview
 
-This repository adds a Partner Labs Demos page to the OpenShift Console. Each card on the page starts a `ConsoleQuickStart` walkthrough. It can be used via GitHub's "Use this template" feature.
+This repository adds a Virtualization Demos page to the OpenShift Console. Each card on the page starts a `ConsoleQuickStart` walkthrough. It can be used via GitHub's "Use this template" feature.
 
 **Key Technologies:**
 - TypeScript + React 17
@@ -42,23 +42,23 @@ This plugin uses module federation to load at runtime into the OpenShift Console
 - **NO hex colors** - use PatternFly CSS variables (e.g., `var(--pf-v6-global-palette--blue-500)`)
 - **NO naked element selectors** (like `table`, `div`) - prevents overwriting console styles
 - **NO `.pf-` or `.co-` prefixed classes** - these are reserved for PatternFly and console
-- **Prefix all custom classes** with plugin name (e.g., `console-plugin-template__nice`)
+- **Prefix all custom classes** with plugin name (e.g., `console-demos-ocp-virtualization__nice`)
 
 Don't disable these rules without understanding they protect against layout breakage!
 
 ## Internationalization (i18n)
 
-**Namespace Convention:** `plugin__<plugin-name>` (here, `plugin__partner-labs-console-plugin`)
+**Namespace Convention:** `plugin__<plugin-name>` (here, `plugin__console-demos-ocp-virtualization`)
 
 ### In React Components:
 ```tsx
-const { t } = useTranslation('plugin__partner-labs-console-plugin');
+const { t } = useTranslation('plugin__console-demos-ocp-virtualization');
 return <h1>{t('Hello, World!')}</h1>;
 ```
 
 ### In console-extensions.json:
 ```json
-"name": "%plugin__partner-labs-console-plugin~My Label%"
+"name": "%plugin__console-demos-ocp-virtualization~My Label%"
 ```
 
 **After adding/changing messages:** Run `yarn i18n` to update locale files in `/locales`
@@ -85,7 +85,7 @@ integration-tests/     # Playwright e2e tests
 1. `yarn install` - install dependencies
 2. `yarn start` - starts dev server on port 9001 with CORS
 3. `yarn start-console` - runs OpenShift console in container (requires cluster login)
-4. Navigate to http://localhost:9000/partner-labs-demos
+4. Navigate to http://localhost:9000/console-demos-ocp-virtualization
 
 ### Code Quality
 - `yarn lint` - runs eslint and stylelint (with --fix)
@@ -142,7 +142,7 @@ do not assume the localhost Console supports command execution.
   "type": "console.navigation/href",
   "properties": {
     "id": "my-nav-item",
-    "name": "%plugin__console-plugin-template~My Page%",
+    "name": "%plugin__console-demos-ocp-virtualization~Virtualization Demos%",
     "href": "/my-page",
     "perspective": "admin",
     "section": "home"
@@ -168,7 +168,7 @@ docker build -t quay.io/my-repository/my-plugin:latest .
 
 ### Deploying via Helm
 ```bash
-helm upgrade -i my-plugin charts/partner-labs-console-plugin \
+helm upgrade -i my-plugin charts/console-demos-ocp-virtualization \
   -n my-namespace \
   --create-namespace \
   --set plugin.image=my-plugin-image-location
