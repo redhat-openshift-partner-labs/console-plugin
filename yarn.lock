@@ -358,7 +358,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/runtime@npm:^7.1.2, @babel/runtime@npm:^7.12.13, @babel/runtime@npm:^7.12.5, @babel/runtime@npm:^7.14.5, @babel/runtime@npm:^7.15.4, @babel/runtime@npm:^7.23.2, @babel/runtime@npm:^7.28.4, @babel/runtime@npm:^7.7.6, @babel/runtime@npm:^7.9.2":
+"@babel/runtime@npm:^7.1.2, @babel/runtime@npm:^7.12.13, @babel/runtime@npm:^7.12.5, @babel/runtime@npm:^7.14.5, @babel/runtime@npm:^7.15.4, @babel/runtime@npm:^7.28.4, @babel/runtime@npm:^7.7.6, @babel/runtime@npm:^7.9.2":
   version: 7.29.7
   resolution: "@babel/runtime@npm:7.29.7"
   checksum: 10c0/ca11572f7146b21e0bde6a9ed4bb6a89eafbee5f0944c7eb54d0d8a2dac962c33638a1d611e14faa71dfbb92b4b5f9236232208568a6b7d5c6f3f39ddb91771e
@@ -4926,7 +4926,7 @@ __metadata:
     eslint-plugin-react-hooks: "npm:^7.1.1"
     eslint-plugin-testing-library: "npm:^7.16.2"
     globals: "npm:^17.9.0"
-    i18next: "npm:^23.11.5"
+    i18next: "npm:^27.2.2"
     i18next-cli: "npm:1.30.0"
     jest: "npm:^30.4.2"
     jest-environment-jsdom: "npm:^30.4.1"
@@ -7442,12 +7442,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"i18next@npm:^23.11.5":
-  version: 23.16.8
-  resolution: "i18next@npm:23.16.8"
-  dependencies:
-    "@babel/runtime": "npm:^7.23.2"
-  checksum: 10c0/57d249191e8a39bbbbe190cfa2e2bb651d0198e14444fe80453d3df8d02927de3c147c77724e9ae6c72fa241898cd761e3fdcd55d053db373471f1ac084bf345
+"i18next@npm:^27.2.2":
+  version: 27.2.2
+  resolution: "i18next@npm:27.2.2"
+  peerDependencies:
+    typescript: ^5 || ^6 || ^7
+  peerDependenciesMeta:
+    typescript:
+      optional: true
+  checksum: 10c0/97cb1992b8cba47b428f7065c5bdde71a7bcf63667b648ff147ccac175b10a6860d4a3f2d3e605040e7c18432e9cf6867aaa649671c42526b6e7e2761acc6e75
   languageName: node
   linkType: hard
 

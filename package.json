@@ -55,7 +55,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-testing-library": "^7.16.2",
     "globals": "^17.9.0",
-    "i18next": "^23.11.5",
+    "i18next": "^27.2.2",
     "i18next-cli": "1.30.0",
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",
