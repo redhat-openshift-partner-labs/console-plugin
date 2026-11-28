@@ -77,13 +77,135 @@ Use the project selector above the Demos tabs to change the active Console
 project. Activity shows the labeled resources in that project; **All projects**
 shows none.
 
-## Add content
+## Add a walkthrough
 
-To add a walkthrough card, follow the
-[ConsoleQuickStart demo wiring guide](how-to-create-consolequickstart-demo.md).
-Run `yarn i18n` after changing translated strings.
+The plugin supplies a launch card; the Console displays the walkthrough from an
+installed `ConsoleQuickStart` resource. Use the
+[OpenShift Quick Start authoring guide](https://docs.redhat.com/en/documentation/openshift_container_platform/4.22/html/web_console/creating-quick-start-tutorials)
+for the resource schema and the walkthrough content.
 
-### Use as a template
+![Walkthrough card wiring: in the plugin image, src/cards.yaml is loaded by src/data/cards.ts, rendered by DemosPage.tsx, and launched with setActiveQuickStart; in the Helm chart, the values.yaml switch renders the CR template, Helm installs the ConsoleQuickStart, and the Console displays it.](docs/images/card-wiring.svg)
+
+<details>
+<summary>Diagram source</summary>
+
+```mermaid
+flowchart TB
+    subgraph plugin["Plugin image"]
+        card["Card registry<br/>src/cards.yaml<br/>id, quickStartId, kind<br/>topic, durationMinutes"]
+        loader["Card loader<br/>src/data/cards.ts<br/>loads the registry as DemoCard[]"]
+        gallery["Gallery<br/>DemosPage.tsx<br/>the user clicks the card"]
+        launch["Launch<br/>useQuickStartContext<br/>setActiveQuickStart(card.quickStartId)"]
+        card --> loader --> gallery --> launch
+    end
+
+    subgraph chart["Helm chart"]
+        values["Install switch<br/>values.yaml<br/>plugin.quickStarts.my-demo.enabled"]
+        manifest["CR template<br/>templates/virt-cookbook/my-demo.yaml<br/>metadata.name: my-demo"]
+        values -->|"enabled: true"| manifest
+    end
+
+    manifest -->|"Helm installs"| resource[("ConsoleQuickStart<br/>cluster scoped<br/>metadata.name: my-demo")]
+    launch -->|"selects my-demo"| console["OpenShift Console<br/>displays the walkthrough<br/>Quick Start drawer"]
+    resource -->|"walkthrough content"| console
+    %% One name: the card id, quickStartId, template filename, metadata.name, and the Helm switch use the same name
+    %% Labels: durationMinutes must equal spec.durationMinutes; topic is one of setup, create, operate, networking, windows
+    %% Local server: yarn start does not install the resource, and the gallery does not check whether it exists
+    %% Disabled switch: enabled: false omits the resource but leaves the card in the bundle
+```
+
+</details>
+
+| Piece                | Location                                                                                       | Role                                                                                                                                            |
+| -------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Card registry        | [`src/cards.yaml`](src/cards.yaml)                                                             | `kind: quickstart` selects the launch behavior; `quickStartId` identifies the resource; `topic` and `durationMinutes` fill the two card labels. |
+| Card type and loader | [`src/data/cards.ts`](src/data/cards.ts)                                                       | Loads the registry into the plugin bundle as `DemoCard[]`.                                                                                      |
+| Topics               | [`src/data/topics.ts`](src/data/topics.ts)                                                     | `TOPIC_IDS` lists the allowed `topic` values and their labels and colors.                                                                       |
+| Launch handler       | [`src/components/DemosPage.tsx`](src/components/DemosPage.tsx)                                 | Calls `setActiveQuickStart?.(card.quickStartId)` through the SDK's `useQuickStartContext`.                                                      |
+| CR templates         | [`templates/virt-cookbook/`](charts/console-demos-ocp-virtualization/templates/virt-cookbook/) | Helm installs the walkthrough resources.                                                                                                        |
+| Install switches     | [`values.yaml`](charts/console-demos-ocp-virtualization/values.yaml)                           | `plugin.quickStarts.<name>.enabled` controls whether each resource is rendered.                                                                 |
+
+**Use one name for all four identifiers:** the card's `id`, its `quickStartId`,
+the template filename `<name>.yaml`, and the resource's `metadata.name`. Use that
+same name for the Helm switch `plugin.quickStarts.<name>.enabled`. For example,
+`create-vm-web-console` is both card identifiers, the filename is
+`create-vm-web-console.yaml`, and the resource's `metadata.name` is
+`create-vm-web-console`. The SDK launch itself resolves the resource through
+`quickStartId`. Card IDs must be unique.
+
+The card title and the resource's `spec.displayName` are separate: the first
+appears in the gallery, the second in the Console walkthrough. The card's
+`durationMinutes` must equal the resource's `spec.durationMinutes`; the
+validator rejects a difference. The card's `topic` must be one of `setup`,
+`create`, `operate`, `networking`, or `windows` from `src/data/topics.ts`. A
+walkthrough card needs no new route or exposed module.
+
+### Steps
+
+1. Copy an existing template, such as
+   [`vm-templates.yaml`](charts/console-demos-ocp-virtualization/templates/virt-cookbook/vm-templates.yaml),
+   to `templates/virt-cookbook/my-demo.yaml`. Set `metadata.name` and the Helm
+   condition to `my-demo`, then replace the walkthrough content. Preserve the
+   chart label helper. For `my-demo`, the condition is:
+
+   ```gotemplate
+   {{- if (index .Values.plugin.quickStarts "my-demo").enabled }}
+   ```
+
+   Keep the closing `{{- end }}`. The resource is cluster scoped; omit
+   `metadata.namespace`.
+
+2. Add its install switch under `plugin.quickStarts` in `values.yaml`:
+
+   ```yaml
+   my-demo:
+     enabled: true
+   ```
+
+3. Append a unique card to `src/cards.yaml`:
+
+   ```yaml
+   - id: my-demo
+     kind: quickstart
+     topic: operate
+     durationMinutes: 20
+     title: My demo
+     body: Follow a guided walkthrough of my demo.
+     quickStartId: my-demo
+   ```
+
+### Verify
+
+Card metadata ships in the plugin image; resource content and install switches
+ship in the Helm chart. Rebuild and deploy the image for card changes, and
+upgrade the Helm release for resource changes, as described under
+[Deploy](#deploy). `yarn start` alone does not install the resource on your
+development cluster.
+
+Render the new template and confirm the installed resource:
+
+```sh
+helm template console-demos-ocp-virtualization charts/console-demos-ocp-virtualization \
+  --set plugin.image=quay.io/my-repository/console-demos-ocp-virtualization:latest \
+  --show-only templates/virt-cookbook/my-demo.yaml
+oc get consolequickstart my-demo
+```
+
+The parameterized launch test in
+[`DemosPage.spec.tsx`](src/components/DemosPage.spec.tsx) discovers walkthrough
+cards from the registry. Add an opening check in
+[`card-page.spec.ts`](integration-tests/tests/card-page.spec.ts), following the
+existing tests: click `card-action-my-demo`, then assert the walkthrough heading
+and initial content. Run `yarn test` and verify the card at
+`/console-demos-ocp-virtualization` against a cluster with the resource
+installed.
+
+Setting `plugin.quickStarts.my-demo.enabled=false` omits the resource but leaves
+its card in the bundle. The gallery does not check whether the resource exists.
+If a card does not open its walkthrough, check the installed resource name,
+`quickStartId`, and the Helm switch first.
+
+## Use as a template
 
 This repository can be used as a template. Use GitHub's **Use this template**
 action, then update plugin metadata, the i18n namespace, route paths, CSS
@@ -93,7 +215,22 @@ prefix, and Helm values.
 
 Run `make help` to list the targets. `make check` runs linting, unit tests,
 Quick Start validation, and the plugin build. `yarn lint` applies fixes, so
-`make lint` and `make check` can change files.
+`make lint` and `make check` can change files. Run `yarn i18n` after changing
+translated strings.
+
+`yarn validate:quickstarts` lints the chart and checks the rendered resources
+against the card registry and Helm switches: required Quick Start fields, task
+reviews and summaries, YAML types and duplicate keys, the shared naming
+convention, and each card's `topic` and `durationMinutes`. It renders defaults,
+all enabled, each walkthrough disabled in turn, and all disabled; disabling one
+walkthrough must not change another. New templates and cards are discovered
+automatically, and failures name the file or resource and the field or
+rendering scenario.
+
+These checks run without a cluster. They do not execute embedded commands,
+verify external links, or prove that a walkthrough works on a particular
+OpenShift release; verify that in a Console. Console markers such as
+`{{execute}}` and `{{copy}}` are valid rendered content and are preserved.
 
 ## Deploy
 

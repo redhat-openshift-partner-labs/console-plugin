@@ -112,7 +112,7 @@ Current config has `strict: true` and enforces:
 
 ### Adding or Updating a ConsoleQuickStart
 
-Follow the [repository wiring and validation guide](how-to-create-consolequickstart-demo.md)
+Follow the [Add a walkthrough section of the README](README.md#add-a-walkthrough)
 and review the [OpenShift 4.22 Quick Start authoring guide](https://docs.redhat.com/en/documentation/openshift_container_platform/4.22/html/web_console/creating-quick-start-tutorials)
 for every new or changed Quick Start.
 
