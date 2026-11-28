@@ -11,7 +11,7 @@ an installed `ConsoleQuickStart` CR.
 ```mermaid
 flowchart TB
     subgraph plugin["Plugin image"]
-        card["src/cards.yaml<br/>kind: quickstart<br/>id: my-demo<br/>quickStartId: my-demo"]
+        card["src/cards.yaml<br/>kind: quickstart<br/>id: my-demo<br/>quickStartId: my-demo<br/>topic, durationMinutes"]
         loader["src/data/cards.ts<br/>Loads card metadata"]
         gallery["DemosPage.tsx<br/>User clicks the card"]
         launch["useQuickStartContext<br/>setActiveQuickStart(card.quickStartId)"]
@@ -31,8 +31,9 @@ flowchart TB
 
 | Piece                | Location                                                                                  | Role                                                                                       |
 | -------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Card registry        | [`src/cards.yaml`](src/cards.yaml)                                                        | `kind: quickstart` selects the launch behavior; `quickStartId` identifies the CR.          |
+| Card registry        | [`src/cards.yaml`](src/cards.yaml)                                                        | `kind: quickstart` selects the launch behavior; `quickStartId` identifies the CR; `topic` and `durationMinutes` fill the two card labels. |
 | Card type and loader | [`src/data/cards.ts`](src/data/cards.ts)                                                  | Loads the registry into the plugin bundle as `DemoCard[]`.                                 |
+| Topics               | [`src/data/topics.ts`](src/data/topics.ts)                                                | `TOPIC_IDS` lists the allowed `topic` values and their labels and colors.                  |
 | Launch handler       | [`src/components/DemosPage.tsx`](src/components/DemosPage.tsx)                            | Calls `setActiveQuickStart?.(card.quickStartId)` through the SDK's `useQuickStartContext`. |
 | CR templates         | [`templates/virt-cookbook/`](charts/console-demos-ocp-virtualization/templates/virt-cookbook/) | Helm installs the VM walkthrough resources.                                                |
 | Install switches     | [`values.yaml`](charts/console-demos-ocp-virtualization/values.yaml)                           | `plugin.quickStarts.<name>.enabled` controls whether each CR is rendered.                  |
@@ -48,8 +49,11 @@ itself resolves the CR through `quickStartId`. Card IDs must also be unique acro
 all card kinds.
 
 The card title and CR's `spec.displayName` are separate: the first appears in the
-gallery, the second in the Console walkthrough. A QuickStart card needs no new
-route or exposed module.
+gallery, the second in the Console walkthrough. The card's `durationMinutes` must
+equal the CR's `spec.durationMinutes`; the validator rejects a difference. The
+card's `topic` must be one of `setup`, `create`, `operate`, `networking`, or
+`windows` from `src/data/topics.ts`. A QuickStart card needs no new route or
+exposed module.
 
 ## Add a demo
 
@@ -77,6 +81,8 @@ route or exposed module.
    ```yaml
    - id: my-demo
      kind: quickstart
+     topic: operate
+     durationMinutes: 20
      title: My demo
      body: Follow a guided walkthrough of my demo.
      quickStartId: my-demo
@@ -123,8 +129,8 @@ yarn test --ci --runInBand
 
 `validate:quickstarts` lints the chart and checks the rendered resources against
 the card registry and Helm switches. It validates required QuickStart fields,
-task reviews and summaries, YAML types and duplicate keys, and the shared naming
-convention. It renders defaults, all enabled, each individually disabled, and all
+task reviews and summaries, YAML types and duplicate keys, the shared naming
+convention, and each card's `topic` and `durationMinutes`. It renders defaults, all enabled, each individually disabled, and all
 disabled; disabling one walkthrough must not change another. New templates and
 cards are discovered automatically. Failures identify the file/resource and field
 or rendering scenario to fix.

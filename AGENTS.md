@@ -70,6 +70,8 @@ src/
   cards.yaml           # Sparse card registry
   components/          # Card gallery and Activity tab
   data/cards.ts        # Typed card loader
+  data/topics.ts       # Card topic ids, labels, and colors
+  data/topics.ts       # Card topic ids, labels, and colors
 console-extensions.json # Plugin extension declarations
 package.json           # Plugin metadata in consolePlugin section
 tsconfig.json          # TypeScript config (strict: true)
