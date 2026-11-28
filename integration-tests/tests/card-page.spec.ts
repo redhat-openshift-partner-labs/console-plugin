@@ -266,7 +266,7 @@ test.describe('Console plugin cards', () => {
     await expect(page.getByText('Create the monitoring VM', { exact: true })).toBeVisible();
   });
 
-  test('opens the VM export and import walkthrough', async ({ page }) => {
+  test('opens the VM export and import demo', async ({ page }) => {
     await page.goto('/console-demos-ocp-virtualization');
     await page.getByTestId('card-action-vm-export-import').click();
     await expect(page).toHaveURL((url) => url.pathname === '/console-demos-ocp-virtualization');

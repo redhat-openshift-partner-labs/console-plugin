@@ -14,7 +14,7 @@ function resource(id = 'alpha') {
     kind: 'ConsoleQuickStart',
     metadata: { name: id },
     spec: {
-      displayName: 'Example walkthrough',
+      displayName: 'Example demo',
       description: 'Practice a task.',
       introduction: 'Start here.',
       durationMinutes: 5,
@@ -239,7 +239,7 @@ describe('Helm and registry validation', () => {
     expect(validateQuickStarts(root)).toBe(2);
   });
 
-  it('automatically discovers an added walkthrough', () => {
+  it('automatically discovers an added demo', () => {
     switches.gamma = { enabled: true };
     cards.push(quickStartCard('gamma'));
     writeRegistry();
@@ -257,7 +257,7 @@ describe('Helm and registry validation', () => {
     expect(validateQuickStarts(root)).toBe(1);
   });
 
-  it('accepts removal of the last walkthrough and its directory', () => {
+  it('accepts removal of the last demo and its directory', () => {
     switches = {};
     cards = cards.filter((card) => card.kind !== 'quickstart');
     writeRegistry();
@@ -366,7 +366,7 @@ describe('Helm and registry validation', () => {
     expect(() => validateQuickStarts(root)).toThrow('Map keys must be unique');
   });
 
-  it('detects a condition that reads another walkthrough toggle', () => {
+  it('detects a condition that reads another demo toggle', () => {
     switches.beta.enabled = true;
     writeRegistry();
     const value = resource();
