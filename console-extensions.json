@@ -3,16 +3,16 @@
     "type": "console.page/route",
     "properties": {
       "exact": true,
-      "path": "/partner-labs-demos",
+      "path": "/console-demos-ocp-virtualization",
       "component": { "$codeRef": "DemosPage" }
     }
   },
   {
     "type": "console.navigation/href",
     "properties": {
-      "id": "partner-labs-demos",
-      "name": "%plugin__partner-labs-console-plugin~Partner Labs Demos%",
-      "href": "/partner-labs-demos",
+      "id": "console-demos-ocp-virtualization",
+      "name": "%plugin__console-demos-ocp-virtualization~Virtualization Demos%",
+      "href": "/console-demos-ocp-virtualization",
       "perspective": "admin",
       "insertBefore": "home"
     }

@@ -32,7 +32,7 @@ interface WatchResult {
 }
 
 const Row: FC<{ obj: ActivityRow; activeColumnIDs: Set<string> }> = ({ obj, activeColumnIDs }) => {
-  const { t } = useTranslation('plugin__partner-labs-console-plugin');
+  const { t } = useTranslation('plugin__console-demos-ocp-virtualization');
   const { resource, kind } = obj;
   const openDeleteModal = useDeleteModal(resource);
   const vmStatus = (resource as { status?: { printableStatus?: string } }).status?.printableStatus;
@@ -122,7 +122,7 @@ const Row: FC<{ obj: ActivityRow; activeColumnIDs: Set<string> }> = ({ obj, acti
 };
 
 const ActivityTab: FC<{ namespace: string }> = ({ namespace }) => {
-  const { t } = useTranslation('plugin__partner-labs-console-plugin');
+  const { t } = useTranslation('plugin__console-demos-ocp-virtualization');
   const [vmModel, vmModelLoading] = useK8sModel(VM_KIND);
   const [runModel, runModelLoading] = useK8sModel(RUN_KIND);
   const vmKind = (vmModel as { kind?: string } | undefined)?.kind;
@@ -203,7 +203,7 @@ const ActivityTab: FC<{ namespace: string }> = ({ namespace }) => {
   );
   if (namespace === ALL_NAMESPACES_KEY) {
     return (
-      <div className="partner-labs-console-plugin__activity" data-test="activity-tab">
+      <div className="console-demos-ocp-virtualization__activity" data-test="activity-tab">
         <EmptyState titleText={t('Select a project to see activity')} headingLevel="h2" />
       </div>
     );
@@ -211,7 +211,7 @@ const ActivityTab: FC<{ namespace: string }> = ({ namespace }) => {
 
   if (loaded && !vmKind && !runKind) {
     return (
-      <div className="partner-labs-console-plugin__activity" data-test="activity-tab">
+      <div className="console-demos-ocp-virtualization__activity" data-test="activity-tab">
         <EmptyState
           titleText={t('OpenShift Pipelines and OpenShift Virtualization are not installed')}
           headingLevel="h2"
@@ -221,7 +221,7 @@ const ActivityTab: FC<{ namespace: string }> = ({ namespace }) => {
   }
 
   return (
-    <div className="partner-labs-console-plugin__activity" data-test="activity-tab">
+    <div className="console-demos-ocp-virtualization__activity" data-test="activity-tab">
       {/* eslint-disable-next-line @typescript-eslint/no-deprecated */}
       <ListPageFilter
         data={staticData}
