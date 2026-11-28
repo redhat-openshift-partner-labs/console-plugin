@@ -1,49 +1,31 @@
 # OpenShift Partner Labs Console Plugin
 
-This dynamic plugin adds a **Virtualization Demos** page to the OpenShift Console.
-Each card on the page starts a `ConsoleQuickStart` walkthrough from
-`src/components/DemosPage.tsx`.
+This OpenShift Console dynamic plugin adds a **Virtualization Demos** page of
+guided OpenShift Virtualization walkthroughs for partners evaluating the
+product and for the contributors who write those walkthroughs.
 
-`src/cards.yaml` is the card registry, and `src/data/cards.ts` loads it. Each
-card carries a topic label (Setup, Create VMs, Operate VMs, Networking, Windows)
-and a duration label; `src/data/topics.ts` defines the topics, and the gallery
-toolbar filters by them.
-`ConsoleQuickStart` chart templates live in
+## Cards
+
+Each card on the page starts one `ConsoleQuickStart` walkthrough in the Console
+Quick Start drawer. `src/cards.yaml` is the card registry, `src/data/cards.ts`
+loads it, and `src/components/DemosPage.tsx` renders the gallery. The
+`ConsoleQuickStart` templates live in
 `charts/console-demos-ocp-virtualization/templates/virt-cookbook/`.
 
-To add a walkthrough card, follow the [ConsoleQuickStart demo wiring guide](how-to-create-consolequickstart-demo.md).
+Each card shows a topic label and a duration label, and the toolbar filters by
+topic. `src/data/topics.ts` defines the five topics:
 
-The route `$codeRef` values in `console-extensions.json` must match
-`consolePlugin.exposedModules` in `package.json`. Run `yarn i18n` after changing
-translated strings.
+| Topic       | Covers                                                                                                  |
+| ----------- | ------------------------------------------------------------------------------------------------------- |
+| Setup       | Installing OpenShift Virtualization and the LVM Storage Operator.                                       |
+| Create VMs  | Creating VMs from the web console, CLI YAML, templates, instance types, cloud-init, and multiple disks. |
+| Operate VMs | virtctl, lifecycle states, cloning, node placement, monitoring, and export and import.                  |
+| Networking  | HTTPS Routes, NetworkPolicy, and static IP addresses.                                                   |
+| Windows     | VirtIO drivers, golden images, and SSH access.                                                          |
 
-## Create a plugin page
-
-![Create a plugin page: an optional navigation link resolves to the page URL, the URL to a route with a path and $codeRef, the $codeRef to an exposed module in package.json, and the module to a React component.](docs/images/create-plugin-page.svg)
-
-<details>
-<summary>Diagram source</summary>
-
-```mermaid
-flowchart LR
-    nav["Navigation link, optional<br/>href is the page URL<br/>console.navigation/href<br/>console-extensions.json"] --> url["Page URL<br/>the route path a user opens"]
-    url --> route["Route<br/>path and $codeRef<br/>console.page/route<br/>console-extensions.json"]
-    route --> module["Exposed module<br/>key equals the route $codeRef<br/>consolePlugin.exposedModules<br/>package.json"]
-    module --> page["Page component<br/>React function component<br/>src/components/MyPage.tsx"]
-    %% $codeRef must equal the exposedModules key in package.json
-    %% console-extensions.json changes require restarting yarn start
-    %% Run yarn i18n after adding translated strings
-```
-
-</details>
-
-Create the component, expose it under a name such as `MyPage`, and use that name
-as the route's `$codeRef`. The route's `path` is the URL to open. To make the page
-discoverable, add a navigation link whose `href` is that path.
-
-This repository can be used as a template. Use GitHub's **Use this template**
-action, then update plugin metadata, the i18n namespace, route paths, CSS
-prefix, and Helm values.
+The duration label reads `durationMinutes` from the card entry, which must
+equal the resource's `spec.durationMinutes`; `yarn validate:quickstarts`
+checks it.
 
 ## Requirements
 
@@ -95,10 +77,47 @@ Use the project selector above the Demos tabs to change the active Console
 project. Activity shows the labeled resources in that project; **All projects**
 shows none.
 
-Run `make help` to see the available workflows. `make check` runs linting,
-unit tests, Quick Start validation, and the plugin build. Note that the existing
-`yarn lint` script applies fixes, so `make lint` and `make check` can update
-files.
+## Add content
+
+To add a walkthrough card, follow the
+[ConsoleQuickStart demo wiring guide](how-to-create-consolequickstart-demo.md).
+Run `yarn i18n` after changing translated strings.
+
+### Create a plugin page
+
+![Create a plugin page: an optional navigation link resolves to the page URL, the URL to a route with a path and $codeRef, the $codeRef to an exposed module in package.json, and the module to a React component.](docs/images/create-plugin-page.svg)
+
+<details>
+<summary>Diagram source</summary>
+
+```mermaid
+flowchart LR
+    nav["Navigation link, optional<br/>href is the page URL<br/>console.navigation/href<br/>console-extensions.json"] --> url["Page URL<br/>the route path a user opens"]
+    url --> route["Route<br/>path and $codeRef<br/>console.page/route<br/>console-extensions.json"]
+    route --> module["Exposed module<br/>key equals the route $codeRef<br/>consolePlugin.exposedModules<br/>package.json"]
+    module --> page["Page component<br/>React function component<br/>src/components/MyPage.tsx"]
+    %% $codeRef must equal the exposedModules key in package.json
+    %% console-extensions.json changes require restarting yarn start
+    %% Run yarn i18n after adding translated strings
+```
+
+</details>
+
+Create the component, expose it under a name such as `MyPage`, and use that name
+as the route's `$codeRef`. The route's `path` is the URL to open. To make the page
+discoverable, add a navigation link whose `href` is that path.
+
+### Use as a template
+
+This repository can be used as a template. Use GitHub's **Use this template**
+action, then update plugin metadata, the i18n namespace, route paths, CSS
+prefix, and Helm values.
+
+## Check
+
+Run `make help` to list the targets. `make check` runs linting, unit tests,
+Quick Start validation, and the plugin build. `yarn lint` applies fixes, so
+`make lint` and `make check` can change files.
 
 ## Deploy
 
@@ -190,3 +209,14 @@ The target:
 Set `IMAGE` to a full image reference to override the generated name.
 Reviewers can check out a pull request without deploying with
 `make checkout-pr PR=<number>`; it needs `gh` and a clean working tree.
+
+## Contributing
+
+[CONTRIBUTING.md](CONTRIBUTING.md) covers the change workflow, commit sign-off,
+and the pull request checks.
+
+## Diagram sources
+
+The diagrams under `docs/images/` are hand-written SVGs built to
+[docs/images/SVG-STYLE.md](docs/images/SVG-STYLE.md). The Mermaid source of
+each figure is in the collapsed block under it.
