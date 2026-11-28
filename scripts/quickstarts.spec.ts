@@ -30,6 +30,10 @@ function resource(id = 'alpha') {
   };
 }
 
+function quickStartCard(id: string) {
+  return { id, kind: 'quickstart', quickStartId: id, topic: 'setup', durationMinutes: 5 };
+}
+
 function replaceField(value: unknown, path: string, replacement: unknown): void {
   const parts = path.split('.');
   let parent = value as Record<string, unknown>;
@@ -186,7 +190,13 @@ describe('QuickStart structure', () => {
 describe('Helm and registry validation', () => {
   let root: string;
   let switches: Record<string, { enabled: boolean | string }>;
-  let cards: { id: string; kind: string; quickStartId?: string }[];
+  let cards: {
+    id: string;
+    kind: string;
+    quickStartId?: string;
+    topic?: string;
+    durationMinutes?: unknown;
+  }[];
   let values: { plugin: Record<string, unknown> };
 
   function writeRegistry(): void {
@@ -213,10 +223,7 @@ describe('Helm and registry validation', () => {
       'values.yaml',
     ) as typeof values;
     switches = { alpha: { enabled: true }, beta: { enabled: false } };
-    cards = [
-      { id: 'page', kind: 'page' },
-      ...['alpha', 'beta'].map((id) => ({ id, kind: 'quickstart', quickStartId: id })),
-    ];
+    cards = [{ id: 'page', kind: 'page' }, ...['alpha', 'beta'].map((id) => quickStartCard(id))];
     writeRegistry();
     // Helm must receive escaped Console markers in templates, but emit them literally.
     for (const id of ['alpha', 'beta']) {
@@ -234,7 +241,7 @@ describe('Helm and registry validation', () => {
 
   it('automatically discovers an added walkthrough', () => {
     switches.gamma = { enabled: true };
-    cards.push({ id: 'gamma', kind: 'quickstart', quickStartId: 'gamma' });
+    cards.push(quickStartCard('gamma'));
     writeRegistry();
     const value = resource('gamma');
     value.spec.tasks[0].description = 'New task.';
@@ -277,6 +284,34 @@ describe('Helm and registry validation', () => {
     writeRegistry();
     expect(() => validateQuickStarts(root)).toThrow(
       'src/cards.yaml[1].quickStartId: expected alpha',
+    );
+  });
+
+  it.each([
+    [
+      'topic',
+      'storage',
+      'src/cards.yaml[1].topic: expected one of setup, create, operate, networking, windows',
+    ],
+    ['topic', undefined, 'src/cards.yaml[1].topic: expected a nonblank string'],
+    [
+      'durationMinutes',
+      undefined,
+      'src/cards.yaml[1].durationMinutes: expected a positive integer',
+    ],
+    ['durationMinutes', '5', 'src/cards.yaml[1].durationMinutes: expected a positive integer'],
+    ['durationMinutes', 0, 'src/cards.yaml[1].durationMinutes: expected a positive integer'],
+  ])('rejects card %s %p', (field, value, error) => {
+    cards[1] = { ...cards[1], [field]: value };
+    writeRegistry();
+    expect(() => validateQuickStarts(root)).toThrow(error);
+  });
+
+  it('rejects a card duration that differs from the rendered resource', () => {
+    cards[1].durationMinutes = 7;
+    writeRegistry();
+    expect(() => validateQuickStarts(root)).toThrow(
+      'src/cards.yaml alpha.durationMinutes: 7 does not equal spec.durationMinutes 5 in the rendered resource',
     );
   });
 
