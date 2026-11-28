@@ -205,12 +205,6 @@ its card in the bundle. The gallery does not check whether the resource exists.
 If a card does not open its demo, check the installed resource name,
 `quickStartId`, and the Helm switch first.
 
-## Use as a template
-
-This repository can be used as a template. Use GitHub's **Use this template**
-action, then update plugin metadata, the i18n namespace, route paths, CSS
-prefix, and Helm values.
-
 ## Check
 
 Run `make help` to list the targets. `make check` runs linting, unit tests,

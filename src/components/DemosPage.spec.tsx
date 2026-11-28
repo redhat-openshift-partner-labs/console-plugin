@@ -100,13 +100,11 @@ describe('DemosPage', () => {
       </MemoryRouter>,
     );
     const search = screen.getByRole('textbox', { name: 'Search demos' });
-    fireEvent.change(search, { target: { value: 'guided walkthrough' } });
-    expect(screen.getAllByTestId(/^card-(?!action)/)).toHaveLength(5);
-    expect(screen.getByText('VM Instancetypes & Preferences')).toBeInTheDocument();
-    expect(screen.getByText('Create a VM from the web console')).toBeInTheDocument();
-    expect(screen.getByText('Create custom VM templates')).toBeInTheDocument();
-    expect(screen.getByText('Cloning Virtual Machines')).toBeInTheDocument();
-    expect(screen.getByText('Cloud-init Fundamentals')).toBeInTheDocument();
+    fireEvent.change(search, { target: { value: 'windows' } });
+    expect(screen.getAllByTestId(/^card-(?!action)/)).toHaveLength(3);
+    expect(screen.getByText('Create Windows golden images')).toBeInTheDocument();
+    expect(screen.getByText('Install Windows with VirtIO drivers')).toBeInTheDocument();
+    expect(screen.getByText('Connect to a Windows VM via SSH')).toBeInTheDocument();
     fireEvent.change(search, { target: { value: 'no matching demo' } });
     expect(screen.getByText('No demos match your filters')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('clear-filters'));
@@ -119,7 +117,7 @@ describe('DemosPage', () => {
         <DemosPage />
       </MemoryRouter>,
     );
-    expect(screen.getAllByText('Start walkthrough')).toHaveLength(cards.length);
+    expect(screen.getAllByText('Start demo')).toHaveLength(cards.length);
     // Without an i18n instance, t() returns the key, so the duration pill shows the raw key.
     expect(screen.getByTestId('card-vm-export-import')).toHaveTextContent('{{minutes}} min');
     const topics = getTopics((key) => key);

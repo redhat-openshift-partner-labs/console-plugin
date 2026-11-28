@@ -3,7 +3,7 @@
   topic: create
   durationMinutes: 15
   title: VM Instancetypes & Preferences
-  body: Start a guided walkthrough defined by a ConsoleQuickStart resource.
+  body: Standardize VM definitions with instance types and preferences.
   quickStartId: vm-instancetypes-and-preferences
 
 - id: create-vm-cli-yaml
@@ -51,7 +51,7 @@
   topic: create
   durationMinutes: 25
   title: Create a VM from the web console
-  body: Follow a guided walkthrough to create, access, and manage a VM from a template.
+  body: Create, access, and manage a VM from an OpenShift Virtualization template.
   quickStartId: create-vm-web-console
 
 - id: vm-templates
@@ -59,7 +59,7 @@
   topic: create
   durationMinutes: 30
   title: Create custom VM templates
-  body: Follow a guided walkthrough to inspect, customize, and test reusable VM templates with the CLI.
+  body: Inspect, customize, and test reusable VM templates with the CLI.
   quickStartId: vm-templates
 
 - id: windows-golden-images
@@ -91,7 +91,7 @@
   topic: operate
   durationMinutes: 20
   title: Cloning Virtual Machines
-  body: Start a guided walkthrough for cloning virtual machines in OpenShift Virtualization.
+  body: Clone existing VMs into identical or customized instances with their software and settings.
   quickStartId: cloning-vms
 
 - id: windows-vm-virtio-drivers
@@ -131,7 +131,7 @@
   topic: create
   durationMinutes: 25
   title: Cloud-init Fundamentals
-  body: Follow a guided walkthrough to deliver first-boot configuration to a Fedora virtual machine with KubeVirt cloud-init NoCloud.
+  body: Deliver first-boot configuration to a Fedora VM with KubeVirt cloud-init NoCloud.
   quickStartId: cloud-init-fundamentals
 
 - id: vm-monitoring-metrics
