@@ -18,6 +18,7 @@ import {
   Gallery,
   GalleryItem,
   Label,
+  LabelGroup,
   PageSection,
   SearchInput,
   Tab,
@@ -29,30 +30,30 @@ import {
   ToolbarContent,
   ToolbarItem,
 } from '@patternfly/react-core';
+import { OutlinedClockIcon } from '@patternfly/react-icons';
 import { useState, type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cards } from '../data/cards';
 import { getKinds } from '../data/kinds';
+import { getTopics, TOPIC_IDS, type TopicId } from '../data/topics';
 import ActivityTab from './ActivityTab';
 import RouterBridge from './RouterBridge';
 import './demos.css';
-
-const availableKinds = Array.from(new Set(cards.map((card) => card.kind)));
 
 const DemosPageContent: FC = () => {
   const { t } = useTranslation('plugin__console-demos-ocp-virtualization');
   const [namespace] = useActiveNamespace();
   const kinds = getKinds(t);
+  const topics = getTopics(t);
   const { setActiveQuickStart } = useQuickStartContext();
   const [activeTab, setActiveTab] = useState<'catalog' | 'activity'>('catalog');
   const [query, setQuery] = useState('');
-  // Typed as string: every card shares one kind, and a literal type would make the filter constant.
-  const [selectedKind, setSelectedKind] = useState<string>('all');
+  const [selectedTopic, setSelectedTopic] = useState<TopicId | 'all'>('all');
 
   const filteredCards = cards.filter((card) => {
-    const matchesKind = selectedKind === 'all' || card.kind === selectedKind;
+    const matchesTopic = selectedTopic === 'all' || card.topic === selectedTopic;
     const text = `${card.title} ${card.body}`.toLocaleLowerCase();
-    return matchesKind && text.includes(query.trim().toLocaleLowerCase());
+    return matchesTopic && text.includes(query.trim().toLocaleLowerCase());
   });
 
   return (
@@ -90,25 +91,25 @@ const DemosPageContent: FC = () => {
                     data-test="search-demos"
                   />
                 </ToolbarItem>
-                <ToolbarItem className="console-demos-ocp-virtualization__kind-scroll">
-                  <ToggleGroup aria-label={t('Filter by kind')}>
+                <ToolbarItem className="console-demos-ocp-virtualization__topic-scroll">
+                  <ToggleGroup aria-label={t('Filter by topic')}>
                     <ToggleGroupItem
                       text={t('All')}
-                      isSelected={selectedKind === 'all'}
+                      isSelected={selectedTopic === 'all'}
                       onChange={() => {
-                        setSelectedKind('all');
+                        setSelectedTopic('all');
                       }}
-                      data-test="kind-all"
+                      data-test="topic-all"
                     />
-                    {availableKinds.map((kind) => (
+                    {TOPIC_IDS.map((topic) => (
                       <ToggleGroupItem
-                        key={kind}
-                        text={kinds[kind].label}
-                        isSelected={selectedKind === kind}
+                        key={topic}
+                        text={topics[topic].label}
+                        isSelected={selectedTopic === topic}
                         onChange={() => {
-                          setSelectedKind(kind);
+                          setSelectedTopic(topic);
                         }}
-                        data-test={`kind-${kind}`}
+                        data-test={`topic-${topic}`}
                       />
                     ))}
                   </ToggleGroup>
@@ -117,13 +118,13 @@ const DemosPageContent: FC = () => {
             </Toolbar>
             {filteredCards.length === 0 ? (
               <EmptyState titleText={t('No demos match your filters')} headingLevel="h2">
-                <EmptyStateBody>{t('Try another search or kind.')}</EmptyStateBody>
+                <EmptyStateBody>{t('Try another search or topic.')}</EmptyStateBody>
                 <EmptyStateActions>
                   <Button
                     variant="link"
                     onClick={() => {
                       setQuery('');
-                      setSelectedKind('all');
+                      setSelectedTopic('all');
                     }}
                     data-test="clear-filters"
                   >
@@ -147,9 +148,19 @@ const DemosPageContent: FC = () => {
                           name: `demo-${card.id}`,
                         }}
                       >
-                        <Label color={kinds[card.kind].color} isCompact>
-                          {kinds[card.kind].label}
-                        </Label>
+                        <LabelGroup aria-label={t('Topic and duration')}>
+                          <Label color={topics[card.topic].color} isCompact>
+                            {topics[card.topic].label}
+                          </Label>
+                          <Label
+                            variant="outline"
+                            color="grey"
+                            icon={<OutlinedClockIcon />}
+                            isCompact
+                          >
+                            {t('{{minutes}} min', { minutes: card.durationMinutes })}
+                          </Label>
+                        </LabelGroup>
                       </CardHeader>
                       <CardTitle id={`card-title-${card.id}`}>{card.title}</CardTitle>
                       <CardBody>{card.body}</CardBody>

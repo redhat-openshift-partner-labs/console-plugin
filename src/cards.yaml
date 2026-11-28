@@ -1,119 +1,159 @@
 - id: vm-instancetypes-and-preferences
   kind: quickstart
+  topic: create
+  durationMinutes: 15
   title: VM Instancetypes & Preferences
   body: Start a guided walkthrough defined by a ConsoleQuickStart resource.
   quickStartId: vm-instancetypes-and-preferences
 
 - id: create-vm-cli-yaml
   kind: quickstart
+  topic: create
+  durationMinutes: 20
   title: Create a VM with CLI YAML
   body: Generate, review, and apply a VirtualMachine YAML manifest with the OpenShift CLI.
   quickStartId: create-vm-cli-yaml
 
 - id: virtctl-basics
   kind: quickstart
+  topic: operate
+  durationMinutes: 20
   title: Using virtctl for VM management
   body: Install virtctl and use it to manage, access, and troubleshoot virtual machines.
   quickStartId: virtctl-basics
 
 - id: multi-disk-configuration
   kind: quickstart
+  topic: create
+  durationMinutes: 25
   title: Configure multiple VM disks
   body: Create a VM with separate boot and data disks and verify their storage configuration.
   quickStartId: multi-disk-configuration
 
 - id: install-configure-ocpv-operator
   kind: quickstart
+  topic: setup
+  durationMinutes: 10
   title: Install and configure OpenShift Virtualization
   body: Install the OpenShift Virtualization Operator and verify its deployment.
   quickStartId: install-configure-ocpv-operator
 
 - id: install-lvm-storage-operator
   kind: quickstart
+  topic: setup
+  durationMinutes: 20
   title: Install the LVM Storage Operator
   body: Install and configure LVM storage on a cluster with a spare local disk.
   quickStartId: install-lvm-storage-operator
 
 - id: create-vm-web-console
   kind: quickstart
+  topic: create
+  durationMinutes: 25
   title: Create a VM from the web console
   body: Follow a guided walkthrough to create, access, and manage a VM from a template.
   quickStartId: create-vm-web-console
 
 - id: vm-templates
   kind: quickstart
+  topic: create
+  durationMinutes: 30
   title: Create custom VM templates
   body: Follow a guided walkthrough to inspect, customize, and test reusable VM templates with the CLI.
   quickStartId: vm-templates
 
 - id: windows-golden-images
   kind: quickstart
+  topic: windows
+  durationMinutes: 90
   title: Create Windows golden images
   body: Build a Windows Server 2025 golden image with Tekton, clone it with sysprep settings, and verify the guest.
   quickStartId: windows-golden-images
 
 - id: vm-ingress-routes
   kind: quickstart
+  topic: networking
+  durationMinutes: 15
   title: Expose a VM with an HTTPS Route
   body: Run Nginx in a Fedora VM, expose it through a Service and an HTTPS Route, and clean up the demo resources.
   quickStartId: vm-ingress-routes
 
 - id: vm-lifecycle-states
   kind: quickstart
+  topic: operate
+  durationMinutes: 25
   title: Understanding VM lifecycle states
   body: Manage virtual machine lifecycle by starting, monitoring, pausing, and stopping VMs.
   quickStartId: vm-lifecycle-states
 
 - id: cloning-vms
   kind: quickstart
+  topic: operate
+  durationMinutes: 20
   title: Cloning Virtual Machines
   body: Start a guided walkthrough for cloning virtual machines in OpenShift Virtualization.
   quickStartId: cloning-vms
 
 - id: windows-vm-virtio-drivers
   kind: quickstart
+  topic: windows
+  durationMinutes: 90
   title: Install Windows with VirtIO drivers
   body: Upload installation media, install Windows Server 2025 with VirtIO drivers, and verify the QEMU guest agent.
   quickStartId: windows-vm-virtio-drivers
 
 - id: ssh-access-windows-vms
   kind: quickstart
+  topic: windows
+  durationMinutes: 45
   title: Connect to a Windows VM via SSH
   body: Install OpenSSH on a Windows VM, fix the firewall profile, expose port 22 with a Service, and connect with password or SSH keys.
   quickStartId: ssh-access-windows-vms
 
 - id: network-policies-vms
   kind: quickstart
+  topic: networking
+  durationMinutes: 15
   title: "VM Cookbook: Network Policies for VMs"
   body: Deny incoming traffic to a VM, then allow HTTP from a labeled client using NetworkPolicy.
   quickStartId: network-policies-vms
 
 - id: static-ip-configuration
   kind: quickstart
+  topic: networking
+  durationMinutes: 20
   title: "VM Cookbook: Static IP Configuration"
   body: Configure static secondary addresses for two Fedora VMs on an isolated OVN network and test connectivity.
   quickStartId: static-ip-configuration
 
 - id: cloud-init-fundamentals
   kind: quickstart
+  topic: create
+  durationMinutes: 25
   title: Cloud-init Fundamentals
   body: Follow a guided walkthrough to deliver first-boot configuration to a Fedora virtual machine with KubeVirt cloud-init NoCloud.
   quickStartId: cloud-init-fundamentals
 
 - id: vm-monitoring-metrics
   kind: quickstart
+  topic: operate
+  durationMinutes: 20
   title: Monitor VM performance and metrics
   body: Create a Fedora VM, inspect its built-in charts, and query KubeVirt performance and lifecycle metrics with PromQL.
   quickStartId: vm-monitoring-metrics
 
 - id: vm-export-import
   kind: quickstart
+  topic: operate
+  durationMinutes: 90
   title: Exporting and Importing VMs for Cross-Cluster Mobility
   body: Export a VM disk to a registry, import it on another cluster, and recreate the VM.
   quickStartId: vm-export-import
 
 - id: node-placement-affinity
   kind: quickstart
+  topic: operate
+  durationMinutes: 25
   title: Control VM node placement and affinity
   body: Pin VMs to selected nodes, co-locate related VMs, and separate VMs for availability.
   quickStartId: node-placement-affinity
