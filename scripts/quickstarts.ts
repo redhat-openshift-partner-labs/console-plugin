@@ -3,6 +3,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { parseAllDocuments, stringify } from 'yaml';
+import { TOPIC_IDS } from '../src/data/topics.ts';
 
 const CHART = 'charts/console-demos-ocp-virtualization';
 const TEMPLATES = 'templates/virt-cookbook';
@@ -25,6 +26,15 @@ function mapping(value: unknown, path: string): Mapping {
 function text(value: unknown, path: string, max = Infinity): string {
   check(typeof value === 'string' && value.trim().length > 0, path, 'expected a nonblank string');
   check(Array.from(value).length <= max, path, `must contain at most ${String(max)} characters`);
+  return value;
+}
+
+function positiveInteger(value: unknown, path: string): number {
+  check(
+    typeof value === 'number' && Number.isInteger(value) && value > 0,
+    path,
+    'expected a positive integer',
+  );
   return value;
 }
 
@@ -135,13 +145,7 @@ export function validateResource(value: unknown, path: string, id: string): Mapp
   const spec = mapping(resource.spec, `${path}.spec`);
   stringFields(spec, `${path}.spec`, ['displayName', 'introduction']);
   text(spec.description, `${path}.spec.description`, 256);
-  check(
-    typeof spec.durationMinutes === 'number' &&
-      Number.isInteger(spec.durationMinutes) &&
-      spec.durationMinutes > 0,
-    `${path}.spec.durationMinutes`,
-    'expected a positive integer',
-  );
+  positiveInteger(spec.durationMinutes, `${path}.spec.durationMinutes`);
   const tasks = list(spec.tasks, `${path}.spec.tasks`);
   check(tasks.length > 0, `${path}.spec.tasks`, 'expected at least one task');
   tasks.forEach((task, index) => {
@@ -172,9 +176,15 @@ export function validateResource(value: unknown, path: string, id: string): Mapp
   return resource;
 }
 
+interface CardFacts {
+  topic: string;
+  durationMinutes: number;
+}
+
 interface Inventory {
   templates: Map<string, string>;
   defaults: Record<string, boolean>;
+  cards: Map<string, CardFacts>;
 }
 
 function matchIds(actual: string[], expected: string[], path: string): void {
@@ -187,9 +197,9 @@ function matchIds(actual: string[], expected: string[], path: string): void {
   );
 }
 
-function cardIds(value: unknown): string[] {
+function cardFacts(value: unknown): Map<string, CardFacts> {
   const seen = new Set<string>();
-  const quickStarts: string[] = [];
+  const quickStarts = new Map<string, CardFacts>();
   list(value, 'src/cards.yaml').forEach((value, index) => {
     const path = `src/cards.yaml[${String(index)}]`;
     const card = mapping(value, path);
@@ -198,7 +208,16 @@ function cardIds(value: unknown): string[] {
     seen.add(id);
     if (card.kind === 'quickstart') {
       check(card.quickStartId === id, `${path}.quickStartId`, `expected ${id}`);
-      quickStarts.push(id);
+      const topic = text(card.topic, `${path}.topic`);
+      check(
+        (TOPIC_IDS as readonly string[]).includes(topic),
+        `${path}.topic`,
+        `expected one of ${TOPIC_IDS.join(', ')}`,
+      );
+      quickStarts.set(id, {
+        topic,
+        durationMinutes: positiveInteger(card.durationMinutes, `${path}.durationMinutes`),
+      });
     }
   });
   return quickStarts;
@@ -240,12 +259,24 @@ function readInventory(root: string): Inventory {
     defaults[id] = toggle.enabled;
   }
   matchIds(Object.keys(defaults), [...ids], `${valuesPath}.plugin.quickStarts`);
-  matchIds(
-    cardIds(parseYaml(readFileSync(join(root, 'src/cards.yaml'), 'utf8'), 'src/cards.yaml')),
-    [...ids],
-    'src/cards.yaml quickstart cards',
+  const cards = cardFacts(
+    parseYaml(readFileSync(join(root, 'src/cards.yaml'), 'utf8'), 'src/cards.yaml'),
   );
-  return { templates, defaults };
+  matchIds([...cards.keys()], [...ids], 'src/cards.yaml quickstart cards');
+  return { templates, defaults, cards };
+}
+
+// The card shows durationMinutes before the resource loads, so the two values must agree.
+function matchDurations(resources: Map<string, Mapping>, inventory: Inventory): void {
+  for (const [id, resource] of resources) {
+    const card = inventory.cards.get(id);
+    const spec = mapping(resource.spec, `${id}.spec`);
+    check(
+      card !== undefined && card.durationMinutes === spec.durationMinutes,
+      `src/cards.yaml ${id}.durationMinutes`,
+      `${String(card?.durationMinutes)} does not equal spec.durationMinutes ${String(spec.durationMinutes)} in the rendered resource`,
+    );
+  }
 }
 
 function helm(root: string, args: string[], input?: string): string {
@@ -336,6 +367,7 @@ export function validateQuickStarts(root: string): number {
   helm(root, ['lint', CHART, '--set-string', IMAGE]);
   const allEnabled = Object.fromEntries(Object.keys(inventory.defaults).map((id) => [id, true]));
   const baseline = validateScenario(root, inventory, 'all enabled', allEnabled);
+  matchDurations(baseline, inventory);
   validateScenario(root, inventory, 'defaults', undefined, baseline);
   for (const id of Object.keys(allEnabled)) {
     const enabled = { ...allEnabled, [id]: false };
