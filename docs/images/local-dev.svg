@@ -1,0 +1,164 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1262 720" width="1262" height="720" role="img" aria-labelledby="title desc">
+  <title id="title">Local development topology</title>
+  <desc id="desc">A developer browser opens http://localhost:9000/console-demos-ocp-virtualization on a Console container started by yarn start-console from quay.io/openshift/origin-console:latest on port 9000. The Console loads the plugin assets from the webpack dev server started by yarn start on port 9001, which serves dist/ with CORS headers, named in BRIDGE_PLUGINS. The dev server builds src/, locales/, and console-extensions.json. The Console reaches the cluster API server at the endpoint from oc whoami --show-server with the bearer token from oc whoami --show-token. Constraints: run oc login before yarn start-console; ConsoleQuickStart resources are not installed by the local server; console-extensions.json changes require restarting yarn start; Console user auth is disabled and requests use the oc token; the plugin host in BRIDGE_PLUGINS depends on the container engine: podman uses host.containers.internal, docker uses host.docker.internal, container uses the bridge100 address, and podman on Linux uses localhost with --network=host.</desc>
+
+  <style>
+    .bg { fill: #ffffff; stroke: #d0d7de; }
+    .frame { fill: #f6f8fa; stroke: #d0d7de; }
+    .t { fill: #1f2328; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+    .m { fill: #59636e; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+    .c { fill: #1f2328; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .h1 { font-size: 24px; font-weight: 700; }
+    .h2 { font-size: 14px; font-weight: 650; }
+    .lbl { font-size: 11px; font-weight: 700; letter-spacing: 1.2px; }
+    .b { font-size: 12px; }
+    .s { font-size: 11px; }
+    .k { font-weight: 650; }
+
+    .src  { fill: #e6f6f4; stroke: #1f8f84; }
+    .gate { fill: #fff4e0; stroke: #c27c0e; }
+    .core { fill: #ecf2ff; stroke: #3b6fd8; }
+    .out  { fill: #f3ecff; stroke: #7a4fd6; }
+    .store{ fill: #eaf7ec; stroke: #2e8b46; }
+    .deny { fill: #fdecec; stroke: #d1242f; }
+    .user { fill: #f6f8fa; stroke: #6e7781; }
+
+    /* badge fills are darker than card strokes so the white digit reaches 4.5:1 */
+    .badge-src  { fill: #1c8278; }
+    .badge-gate { fill: #a3680c; }
+    .badge-core { fill: #3b6fd8; }
+    .badge-out  { fill: #7a4fd6; }
+    .badge-store{ fill: #2c8543; }
+    .badge-t    { fill: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 700; }
+
+    .flow  { stroke: #57606a; stroke-width: 1.8; fill: none; }
+    .ctl   { stroke: #6e7781; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .link  { stroke: #6e7781; stroke-width: 1.6; fill: none; }
+    .rule  { stroke: #d0d7de; stroke-width: 1; }
+    .ah-flow { fill: #57606a; }
+    .ah-ctl  { fill: #6e7781; }
+    .x { stroke: #d1242f; stroke-width: 2; }
+
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d1117; stroke: #30363d; }
+      .frame { fill: #151b23; stroke: #30363d; }
+      .t, .c { fill: #e6edf3; }
+      .m { fill: #9198a1; }
+      .src  { fill: #0f2a28; stroke: #3fb8a9; }
+      .gate { fill: #2e2310; stroke: #e3a33b; }
+      .core { fill: #14213d; stroke: #6d9bff; }
+      .out  { fill: #251a40; stroke: #a888ff; }
+      .store{ fill: #112a19; stroke: #4cc06a; }
+      .deny { fill: #3a1417; stroke: #ff6b6b; }
+      .user { fill: #161b22; stroke: #6e7681; }
+      .badge-src  { fill: #3fb8a9; }
+      .badge-gate { fill: #e3a33b; }
+      .badge-core { fill: #6d9bff; }
+      .badge-out  { fill: #a888ff; }
+      .badge-store{ fill: #4cc06a; }
+      .badge-t    { fill: #0d1117; }
+      .flow  { stroke: #8b949e; }
+      .ctl   { stroke: #768390; }
+      .link  { stroke: #768390; }
+      .rule  { stroke: #30363d; }
+      .ah-flow { fill: #8b949e; }
+      .ah-ctl  { fill: #768390; }
+      .x { stroke: #ff6b6b; }
+    }
+  </style>
+
+  <defs>
+    <marker id="a-flow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-flow" d="M0 0 L10 5 L0 10 z"/></marker>
+    <marker id="a-ctl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="ah-ctl" d="M0 0 L10 5 L0 10 z"/></marker>
+  </defs>
+
+  <!-- Canvas -->
+  <rect class="bg" x="0.5" y="0.5" width="1261" height="719" rx="16"/>
+
+  <!-- Title -->
+  <text class="t h1" x="40" y="46">Local development topology</text>
+  <text class="m b" x="40" y="68">A local Console container loads the plugin from the webpack dev server and talks to a real cluster.</text>
+
+  <!-- ===== Constraints band ===== -->
+  <text class="m lbl" x="40" y="90">CONSTRAINTS</text>
+  <rect class="frame" x="40" y="98" width="1182" height="188" rx="12"/>
+  <text class="t b k" x="56" y="128">Login first</text>
+  <text class="m b" x="230" y="128">run oc login before yarn start-console</text>
+  <line class="rule" x1="56" y1="142" x2="1206" y2="142"/>
+  <text class="t b k" x="56" y="160">Quick Starts</text>
+  <text class="m b" x="230" y="160">ConsoleQuickStart resources are not installed by the local server</text>
+  <line class="rule" x1="56" y1="174" x2="1206" y2="174"/>
+  <text class="t b k" x="56" y="192">Extensions</text>
+  <text class="m b" x="230" y="192">console-extensions.json changes require restarting yarn start</text>
+  <line class="rule" x1="56" y1="206" x2="1206" y2="206"/>
+  <text class="t b k" x="56" y="224">Auth</text>
+  <text class="m b" x="230" y="224">Console user auth is disabled; requests use the oc token</text>
+  <line class="rule" x1="56" y1="238" x2="1206" y2="238"/>
+  <text class="t b k" x="56" y="256">Plugin host</text>
+  <text class="m b" x="230" y="256">podman: host.containers.internal · docker: host.docker.internal · container: bridge100 address · podman on Linux: localhost with --network=host</text>
+
+  <!-- ===== Topology ===== -->
+  <text class="m lbl" x="40" y="318">LOCAL TOPOLOGY</text>
+
+  <!-- Developer browser -->
+  <rect class="user" x="40" y="369" width="180" height="64" rx="12"/>
+  <circle class="m" cx="64" cy="393" r="7"/>
+  <path class="m" d="M52 414 q12 -16 24 0 z"/>
+  <text class="t h2" x="86" y="406">Developer browser</text>
+
+  <!-- 1 Console container -->
+  <rect class="core" x="460" y="326" width="300" height="150" rx="12"/>
+  <circle class="badge-core" cx="478" cy="346" r="10"/><text class="badge-t" x="478" y="350" text-anchor="middle">1</text>
+  <text class="t h2" x="494" y="351">Console container</text>
+  <line class="rule" x1="472" y1="366" x2="748" y2="366"/>
+  <text class="c s" x="472" y="388">quay.io/openshift/origin-console:latest</text>
+  <text class="t b" x="472" y="406">port 9000</text>
+  <text class="c s" x="472" y="458">yarn start-console</text>
+
+  <!-- 2 Cluster API server -->
+  <rect class="core" x="460" y="526" width="300" height="100" rx="12"/>
+  <circle class="badge-core" cx="478" cy="546" r="10"/><text class="badge-t" x="478" y="550" text-anchor="middle">2</text>
+  <text class="t h2" x="494" y="551">Cluster API server</text>
+  <line class="rule" x1="472" y1="566" x2="748" y2="566"/>
+  <text class="c s" x="472" y="588">endpoint from oc whoami --show-server</text>
+
+  <!-- 3 webpack dev server -->
+  <rect class="src" x="958" y="326" width="264" height="150" rx="12"/>
+  <circle class="badge-src" cx="976" cy="346" r="10"/><text class="badge-t" x="976" y="350" text-anchor="middle">3</text>
+  <text class="t h2" x="992" y="351">webpack dev server</text>
+  <line class="rule" x1="970" y1="366" x2="1210" y2="366"/>
+  <text class="c s" x="970" y="388">yarn start</text>
+  <text class="t b" x="970" y="406">port 9001</text>
+  <text class="m s" x="970" y="458">serves dist/ with CORS headers</text>
+
+  <!-- 4 Source files -->
+  <rect class="src" x="958" y="526" width="264" height="100" rx="12"/>
+  <circle class="badge-src" cx="976" cy="546" r="10"/><text class="badge-t" x="976" y="550" text-anchor="middle">4</text>
+  <text class="t h2" x="992" y="551">Source files</text>
+  <line class="rule" x1="970" y1="566" x2="1210" y2="566"/>
+  <text class="c s" x="970" y="588">src/ · locales/</text>
+  <text class="c s" x="970" y="606">console-extensions.json</text>
+
+  <!-- Edges -->
+  <path class="flow" d="M220 401 H458" marker-end="url(#a-flow)"/>
+  <text class="m s" x="228" y="378">http://localhost:9000/</text>
+  <text class="m s" x="228" y="392">console-demos-ocp-virtualization</text>
+  <path class="flow" d="M760 401 H956" marker-end="url(#a-flow)"/>
+  <text class="m s" x="768" y="378">BRIDGE_PLUGINS</text>
+  <text class="m s" x="768" y="392">plugin assets</text>
+  <path class="flow" d="M610 476 V524" marker-end="url(#a-flow)"/>
+  <text class="m s" x="618" y="505">bearer token from oc whoami --show-token</text>
+  <path class="flow" d="M1090 526 V478" marker-end="url(#a-flow)"/>
+  <text class="m s" x="1098" y="505">built on change</text>
+
+  <!-- ===== Legend ===== -->
+  <line class="rule" x1="40" y1="654" x2="1222" y2="654"/>
+  <path class="flow" d="M40 682 H76" marker-end="url(#a-flow)"/>
+  <text class="m s" x="86" y="686">request or asset path</text>
+  <rect class="user" x="260" y="674" width="22" height="16" rx="4"/>
+  <text class="m s" x="290" y="686">developer</text>
+  <rect class="core" x="380" y="674" width="22" height="16" rx="4"/>
+  <text class="m s" x="410" y="686">Console and cluster</text>
+  <rect class="src" x="550" y="674" width="22" height="16" rx="4"/>
+  <text class="m s" x="580" y="686">plugin tooling</text>
+</svg>
