@@ -79,6 +79,8 @@ webpack.config.ts     # Module federation + build config
 locales/               # i18n translation files
 charts/                # Helm chart and ConsoleQuickStart resources
 integration-tests/     # Playwright e2e tests
+docs/images/           # README and CONTRIBUTING diagrams and the SVG style guide
+docs/plans/            # Working plans and scratch renders, ignored by Git
 ```
 
 ## Development Workflow

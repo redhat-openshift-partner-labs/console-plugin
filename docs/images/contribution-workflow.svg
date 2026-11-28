@@ -1,0 +1,188 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1262 660" width="1262" height="660" role="img" aria-labelledby="title desc">
+  <title id="title">Contribution workflow</title>
+  <desc id="desc">Eight steps from claiming an issue to releasing the merged change. 1: claim an issue by commenting /assign on an open, unassigned issue; /unassign releases it. 2: fork, or branch with push access, then run make install. 3: run make check, which runs lint, tests, Quick Start validation, and the build; make lint applies fixes. 4: open a pull request against main that states what changed, why, and how it was verified, with commits signed off by git commit -s. 5: GitHub Actions runs Validate virt-cookbook quickstarts and Lint card-page.spec.ts without cluster credentials. 6: OWNERS reviewers and approvers review; make checkout-pr PR=n checks out a pull request. 7: merge to main. 8: make release builds, pushes, and runs helm upgrade with IMAGE set. Constraints: make check runs make lint, make test, and make build-plugin, and lint applies fixes, so review the diff before committing; run yarn i18n after changing user-visible text and commit locales/; both CI checks run on every pull request without cluster credentials.</desc>
+
+  <style>
+    .bg { fill: #ffffff; stroke: #d0d7de; }
+    .frame { fill: #f6f8fa; stroke: #d0d7de; }
+    .t { fill: #1f2328; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+    .m { fill: #59636e; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+    .c { fill: #1f2328; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .h1 { font-size: 24px; font-weight: 700; }
+    .h2 { font-size: 14px; font-weight: 650; }
+    .lbl { font-size: 11px; font-weight: 700; letter-spacing: 1.2px; }
+    .b { font-size: 12px; }
+    .s { font-size: 11px; }
+    .k { font-weight: 650; }
+
+    .src  { fill: #e6f6f4; stroke: #1f8f84; }
+    .gate { fill: #fff4e0; stroke: #c27c0e; }
+    .core { fill: #ecf2ff; stroke: #3b6fd8; }
+    .out  { fill: #f3ecff; stroke: #7a4fd6; }
+    .store{ fill: #eaf7ec; stroke: #2e8b46; }
+    .deny { fill: #fdecec; stroke: #d1242f; }
+    .user { fill: #f6f8fa; stroke: #6e7781; }
+
+    /* badge fills are darker than card strokes so the white digit reaches 4.5:1 */
+    .badge-src  { fill: #1c8278; }
+    .badge-gate { fill: #a3680c; }
+    .badge-core { fill: #3b6fd8; }
+    .badge-out  { fill: #7a4fd6; }
+    .badge-store{ fill: #2c8543; }
+    .badge-t    { fill: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 700; }
+
+    .flow  { stroke: #57606a; stroke-width: 1.8; fill: none; }
+    .ctl   { stroke: #6e7781; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .link  { stroke: #6e7781; stroke-width: 1.6; fill: none; }
+    .rule  { stroke: #d0d7de; stroke-width: 1; }
+    .ah-flow { fill: #57606a; }
+    .ah-ctl  { fill: #6e7781; }
+    .x { stroke: #d1242f; stroke-width: 2; }
+
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d1117; stroke: #30363d; }
+      .frame { fill: #151b23; stroke: #30363d; }
+      .t, .c { fill: #e6edf3; }
+      .m { fill: #9198a1; }
+      .src  { fill: #0f2a28; stroke: #3fb8a9; }
+      .gate { fill: #2e2310; stroke: #e3a33b; }
+      .core { fill: #14213d; stroke: #6d9bff; }
+      .out  { fill: #251a40; stroke: #a888ff; }
+      .store{ fill: #112a19; stroke: #4cc06a; }
+      .deny { fill: #3a1417; stroke: #ff6b6b; }
+      .user { fill: #161b22; stroke: #6e7681; }
+      .badge-src  { fill: #3fb8a9; }
+      .badge-gate { fill: #e3a33b; }
+      .badge-core { fill: #6d9bff; }
+      .badge-out  { fill: #a888ff; }
+      .badge-store{ fill: #4cc06a; }
+      .badge-t    { fill: #0d1117; }
+      .flow  { stroke: #8b949e; }
+      .ctl   { stroke: #768390; }
+      .link  { stroke: #768390; }
+      .rule  { stroke: #30363d; }
+      .ah-flow { fill: #8b949e; }
+      .ah-ctl  { fill: #768390; }
+      .x { stroke: #ff6b6b; }
+    }
+  </style>
+
+  <defs>
+    <marker id="a-flow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-flow" d="M0 0 L10 5 L0 10 z"/></marker>
+    <marker id="a-ctl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="ah-ctl" d="M0 0 L10 5 L0 10 z"/></marker>
+  </defs>
+
+  <!-- Canvas -->
+  <rect class="bg" x="0.5" y="0.5" width="1261" height="659" rx="16"/>
+
+  <!-- Title -->
+  <text class="t h1" x="40" y="46">Contribution workflow</text>
+  <text class="m b" x="40" y="68">Eight steps from claiming an issue to releasing the merged change.</text>
+
+  <!-- ===== Constraints band ===== -->
+  <text class="m lbl" x="40" y="90">CONSTRAINTS</text>
+  <rect class="frame" x="40" y="98" width="1182" height="124" rx="12"/>
+  <text class="t b k" x="56" y="128">make check</text>
+  <text class="m b" x="260" y="128">runs make lint, make test, and make build-plugin; lint applies fixes, so review the diff before committing</text>
+  <line class="rule" x1="56" y1="142" x2="1206" y2="142"/>
+  <text class="t b k" x="56" y="160">Translations</text>
+  <text class="m b" x="260" y="160">run yarn i18n after changing user-visible text and commit the locales/ changes</text>
+  <line class="rule" x1="56" y1="174" x2="1206" y2="174"/>
+  <text class="t b k" x="56" y="192">CI checks</text>
+  <text class="m b" x="260" y="192">both run on every pull request without cluster credentials</text>
+
+  <!-- ===== Steps 1 to 4 ===== -->
+  <text class="m lbl" x="40" y="254">WORKFLOW · STEPS 1 TO 4</text>
+
+  <!-- 1 Claim an issue -->
+  <rect class="gate" x="40" y="262" width="264" height="120" rx="12"/>
+  <circle class="badge-gate" cx="58" cy="282" r="10"/><text class="badge-t" x="58" y="286" text-anchor="middle">1</text>
+  <text class="t h2" x="74" y="287">Claim an issue</text>
+  <line class="rule" x1="52" y1="302" x2="292" y2="302"/>
+  <text class="t b" x="52" y="324">Comment /assign on an open,</text>
+  <text class="t b" x="52" y="342">unassigned issue</text>
+  <text class="c s" x="52" y="364">/unassign releases it</text>
+
+  <!-- 2 Branch and change -->
+  <rect class="src" x="346" y="262" width="264" height="120" rx="12"/>
+  <circle class="badge-src" cx="364" cy="282" r="10"/><text class="badge-t" x="364" y="286" text-anchor="middle">2</text>
+  <text class="t h2" x="380" y="287">Branch and change</text>
+  <line class="rule" x1="358" y1="302" x2="598" y2="302"/>
+  <text class="t b" x="358" y="324">Fork, or branch with push access</text>
+  <text class="c s" x="358" y="364">make install</text>
+
+  <!-- 3 make check -->
+  <rect class="src" x="652" y="262" width="264" height="120" rx="12"/>
+  <circle class="badge-src" cx="670" cy="282" r="10"/><text class="badge-t" x="670" y="286" text-anchor="middle">3</text>
+  <text class="t h2" x="686" y="287">make check</text>
+  <line class="rule" x1="664" y1="302" x2="904" y2="302"/>
+  <text class="t b" x="664" y="324">Lint, tests, Quick Start validation,</text>
+  <text class="t b" x="664" y="342">and the plugin build</text>
+  <text class="m s" x="664" y="364">make lint applies fixes</text>
+
+  <!-- 4 Open a pull request -->
+  <rect class="src" x="958" y="262" width="264" height="120" rx="12"/>
+  <circle class="badge-src" cx="976" cy="282" r="10"/><text class="badge-t" x="976" y="286" text-anchor="middle">4</text>
+  <text class="t h2" x="992" y="287">Open a pull request</text>
+  <line class="rule" x1="970" y1="302" x2="1210" y2="302"/>
+  <text class="t b" x="970" y="324">Against main: what changed, why,</text>
+  <text class="t b" x="970" y="342">and how it was verified</text>
+  <text class="c s" x="970" y="364">git commit -s</text>
+
+  <!-- ===== Steps 5 to 8 ===== -->
+  <text class="m lbl" x="40" y="434">STEPS 5 TO 8</text>
+
+  <!-- 5 GitHub Actions -->
+  <rect class="core" x="40" y="442" width="264" height="120" rx="12"/>
+  <circle class="badge-core" cx="58" cy="462" r="10"/><text class="badge-t" x="58" y="466" text-anchor="middle">5</text>
+  <text class="t h2" x="74" y="467">GitHub Actions</text>
+  <line class="rule" x1="52" y1="482" x2="292" y2="482"/>
+  <text class="t b" x="52" y="504">Validate virt-cookbook quickstarts</text>
+  <text class="t b" x="52" y="522">Lint card-page.spec.ts</text>
+  <text class="m s" x="52" y="544">no cluster credentials</text>
+
+  <!-- 6 Review -->
+  <rect class="core" x="346" y="442" width="264" height="120" rx="12"/>
+  <circle class="badge-core" cx="364" cy="462" r="10"/><text class="badge-t" x="364" y="466" text-anchor="middle">6</text>
+  <text class="t h2" x="380" y="467">Review</text>
+  <line class="rule" x1="358" y1="482" x2="598" y2="482"/>
+  <text class="t b" x="358" y="504">OWNERS reviewers and approvers</text>
+  <text class="c s" x="358" y="544">make checkout-pr PR=&lt;n&gt;</text>
+
+  <!-- 7 Merge to main -->
+  <rect class="store" x="652" y="442" width="264" height="120" rx="12"/>
+  <circle class="badge-store" cx="670" cy="462" r="10"/><text class="badge-t" x="670" y="466" text-anchor="middle">7</text>
+  <text class="t h2" x="686" y="467">Merge to main</text>
+
+  <!-- 8 make release -->
+  <rect class="out" x="958" y="442" width="264" height="120" rx="12"/>
+  <circle class="badge-out" cx="976" cy="462" r="10"/><text class="badge-t" x="976" y="466" text-anchor="middle">8</text>
+  <text class="t h2" x="992" y="467">make release</text>
+  <line class="rule" x1="970" y1="482" x2="1210" y2="482"/>
+  <text class="t b" x="970" y="504">Build, push, helm upgrade</text>
+  <text class="c s" x="970" y="544">IMAGE=&lt;registry&gt;/&lt;name&gt;:&lt;tag&gt;</text>
+
+  <!-- Edges: step order -->
+  <path class="flow" d="M304 322 H344" marker-end="url(#a-flow)"/>
+  <path class="flow" d="M610 322 H650" marker-end="url(#a-flow)"/>
+  <path class="flow" d="M916 322 H956" marker-end="url(#a-flow)"/>
+  <path class="flow" d="M1090 382 V412 H172 V440" marker-end="url(#a-flow)"/>
+  <path class="flow" d="M304 502 H344" marker-end="url(#a-flow)"/>
+  <path class="flow" d="M610 502 H650" marker-end="url(#a-flow)"/>
+  <path class="flow" d="M916 502 H956" marker-end="url(#a-flow)"/>
+
+  <!-- ===== Legend ===== -->
+  <line class="rule" x1="40" y1="594" x2="1222" y2="594"/>
+  <path class="flow" d="M40 622 H76" marker-end="url(#a-flow)"/>
+  <text class="m s" x="86" y="626">step order</text>
+  <rect class="gate" x="200" y="614" width="22" height="16" rx="4"/>
+  <text class="m s" x="230" y="626">entry</text>
+  <rect class="src" x="300" y="614" width="22" height="16" rx="4"/>
+  <text class="m s" x="330" y="626">local tooling</text>
+  <rect class="core" x="440" y="614" width="22" height="16" rx="4"/>
+  <text class="m s" x="470" y="626">GitHub</text>
+  <rect class="store" x="550" y="614" width="22" height="16" rx="4"/>
+  <text class="m s" x="580" y="626">main branch</text>
+  <rect class="out" x="690" y="614" width="22" height="16" rx="4"/>
+  <text class="m s" x="720" y="626">release</text>
+</svg>
