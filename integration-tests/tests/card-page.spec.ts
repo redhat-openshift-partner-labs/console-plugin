@@ -95,6 +95,15 @@ test.describe('Console plugin cards', () => {
     await expect(page.locator('[data-test-id="namespace-bar-dropdown"]')).toBeVisible();
   });
 
+  test('filters cards by topic', async ({ page }) => {
+    await page.goto('/console-demos-ocp-virtualization');
+    await page.getByRole('button', { name: 'Windows' }).click();
+    await expect(page.getByTestId('card-windows-vm-virtio-drivers')).toBeVisible();
+    await expect(page.getByTestId('card-windows-golden-images')).toBeVisible();
+    await expect(page.getByTestId('card-ssh-access-windows-vms')).toBeVisible();
+    await expect(page.getByTestId('card-virtctl-basics')).toHaveCount(0);
+  });
+
   test('opens the VM creation quick start', async ({ page }) => {
     await page.goto('/console-demos-ocp-virtualization');
     await page.getByTestId('card-action-create-vm-web-console').click();

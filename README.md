@@ -4,7 +4,10 @@ This dynamic plugin adds a **Virtualization Demos** page to the OpenShift Consol
 Each card on the page starts a `ConsoleQuickStart` walkthrough from
 `src/components/DemosPage.tsx`.
 
-`src/cards.yaml` is the card registry, and `src/data/cards.ts` loads it.
+`src/cards.yaml` is the card registry, and `src/data/cards.ts` loads it. Each
+card carries a topic label (Setup, Create VMs, Operate VMs, Networking, Windows)
+and a duration label; `src/data/topics.ts` defines the topics, and the gallery
+toolbar filters by them.
 `ConsoleQuickStart` chart templates live in
 `charts/console-demos-ocp-virtualization/templates/virt-cookbook/`.
 
