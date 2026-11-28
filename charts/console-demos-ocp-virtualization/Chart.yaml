@@ -1,0 +1,5 @@
+apiVersion: v2
+name: console-demos-ocp-virtualization
+description: OpenShift Console plugin for OCP Virtualization Demos by OpenShift Partner Labs
+type: application
+version: 1.0.0

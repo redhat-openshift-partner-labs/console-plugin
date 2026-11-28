@@ -85,7 +85,7 @@ describe('ActivityTab', () => {
     >;
     expect(watches.vms.namespace).toBe('demo');
     expect(watches.runs.selector.matchLabels).toEqual({
-      'app.kubernetes.io/managed-by': 'partner-labs-console-plugin',
+      'app.kubernetes.io/managed-by': 'console-demos-ocp-virtualization',
     });
   });
 

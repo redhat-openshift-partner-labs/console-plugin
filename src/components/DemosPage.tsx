@@ -57,9 +57,9 @@ const DemosPageContent: FC = () => {
 
   return (
     <>
-      <DocumentTitle>{t('Partner Labs Demos')}</DocumentTitle>
+      <DocumentTitle>{t('Virtualization Demos')}</DocumentTitle>
       <NamespaceBar />
-      <ListPageHeader title={t('Partner Labs Demos')} />
+      <ListPageHeader title={t('Virtualization Demos')} />
       <PageSection>
         <Tabs
           activeKey={activeTab}

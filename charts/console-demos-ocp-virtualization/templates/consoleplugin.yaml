@@ -1,0 +1,17 @@
+apiVersion: console.openshift.io/v1
+kind: ConsolePlugin
+metadata:
+  name: {{ template "console-demos-ocp-virtualization.name" . }}
+  labels:
+    {{- include "console-demos-ocp-virtualization.labels" . | nindent 4 }}
+spec:
+  displayName: {{ default (printf "%s Plugin" (include "console-demos-ocp-virtualization.name" .)) .Values.plugin.description }}
+  i18n:
+    loadType: Preload
+  backend:
+    type: Service
+    service:
+      name: {{ template "console-demos-ocp-virtualization.name" . }}
+      namespace: {{ .Release.Namespace }}
+      port: {{ .Values.plugin.port }}
+      basePath: {{ .Values.plugin.basePath }}

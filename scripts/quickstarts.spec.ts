@@ -5,7 +5,7 @@ import { join, resolve } from 'node:path';
 import { stringify } from 'yaml';
 import { parseYaml, validateQuickStarts, validateResource } from './quickstarts.ts';
 
-const chartPath = 'charts/partner-labs-console-plugin';
+const chartPath = 'charts/console-demos-ocp-virtualization';
 const templatePath = `${chartPath}/templates/virt-cookbook`;
 
 function resource(id = 'alpha') {

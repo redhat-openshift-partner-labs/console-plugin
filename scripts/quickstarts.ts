@@ -4,9 +4,9 @@ import { basename, join } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { parseAllDocuments, stringify } from 'yaml';
 
-const CHART = 'charts/partner-labs-console-plugin';
+const CHART = 'charts/console-demos-ocp-virtualization';
 const TEMPLATES = 'templates/virt-cookbook';
-const IMAGE = 'plugin.image=example.invalid/partner-labs-console-plugin:ci';
+const IMAGE = 'plugin.image=example.invalid/console-demos-ocp-virtualization:ci';
 type Mapping = Record<string, unknown>;
 
 function check(condition: unknown, path: string, message: string): asserts condition {

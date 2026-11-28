@@ -1,0 +1,371 @@
+{{- if (index .Values.plugin.quickStarts "vm-templates").enabled }}
+apiVersion: console.openshift.io/v1
+kind: ConsoleQuickStart
+metadata:
+  name: vm-templates
+  labels:
+    {{- include "console-demos-ocp-virtualization.labels" . | nindent 4 }}
+spec:
+  displayName: "Create custom VM templates"
+  description: "Inspect, process, customize, and test reusable virtual machine templates with the OpenShift CLI."
+  durationMinutes: 30
+  tags:
+    - virtualization
+    - kubevirt
+    - templates
+  prerequisites:
+    - "OpenShift 4.19+ with OpenShift Virtualization installed"
+    - "A shell with authenticated oc and virtctl CLI tools, and a text editor"
+    - "Permission to read templates in openshift and to create a tutorial project, Templates, VMs, and disks"
+    - "The rhel9-server-medium template and a ready rhel9 DataSource in openshift-virtualization-os-images"
+    - "A default StorageClass suitable for VM disks and capacity for two test VMs and their cloned disks"
+  introduction: |-
+    A golden image supplies a VM's disk contents. A **Template** supplies its
+    machine definition: compute resources, firmware, networking, disks, labels,
+    and cloud-init settings. Template **parameters** let you reuse that definition
+    with different names and values.
+
+    In this walkthrough, inspect a supplied RHEL 9 template, create a baseline VM,
+    and register a custom template with automatic startup and a parameterized
+    guest username. Use the same shell and working directory throughout. Save the
+    files in the environment where your CLI runs; a Web Terminal requires access
+    to those files and the CLI tools too.
+
+    Use a new `template-example` project exclusively for this tutorial. If that
+    name already exists, choose an unused project name and replace it in every
+    command and manifest below. Never reuse an unrelated project for cleanup.
+  tasks:
+    - title: "Inspect a supplied VM template"
+      description: |-
+        1. List templates and verify the RHEL 9 boot source is ready:
+
+        <span class="pf-v6-c-clipboard-copy pf-m-inline">
+          <code class="pf-v6-c-clipboard-copy__text" data-snippet-id="vm-templates-list">oc get templates -n openshift</code>
+          <span class="pf-v6-c-clipboard-copy__actions">
+            <span class="pf-v6-c-clipboard-copy__actions-item">
+              <button class="pf-v6-c-button pf-m-plain" type="button" aria-label="Copy template-list command" data-copy-for="vm-templates-list">Copy</button>
+            </span>
+          </span>
+        </span>
+
+        `oc get datasource rhel9 -n openshift-virtualization-os-images -o yaml`{{"{{execute}}"}}
+
+        Check the DataSource's **Ready** condition. If it is not ready, resolve
+        the image import or storage problem before continuing.
+
+        2. Save the installed template and list its parameters:
+
+        `oc get template rhel9-server-medium -n openshift -o yaml > rhel9-server.template.yaml`{{"{{execute}}"}}
+
+        `oc process --parameters -f rhel9-server.template.yaml`{{"{{execute}}"}}
+
+        3. Open the file in your editor. Inspect `objects` and `parameters`.
+           Locate `NAME`, `DATA_SOURCE_NAME`, `DATA_SOURCE_NAMESPACE`, and
+           `CLOUD_USER_PASSWORD`. References such as `${NAME}` are replaced
+           when you process the template; generated parameters produce values
+           when no explicit override is supplied.
+
+        This walkthrough expects a template that uses those parameters and
+        `spec.runStrategy: Halted`. Installed template versions can differ;
+        review their settings rather than assuming the downloaded YAML matches
+        an older example.
+      review:
+        instructions: "Did you save the RHEL 9 template, identify its parameters, and verify a ready boot source?"
+        failedTaskHelp: "Check permissions and the installed template name. Ask your administrator to provide the expected RHEL 9 template and boot source if unavailable. Do not continue with a missing or unready image."
+      summary:
+        success: "You identified the VM definition and its replaceable parameters."
+        failed: "Inspect the template and verify its boot source before deploying."
+
+    - title: "Deploy and start a baseline VM"
+      description: |-
+        1. Create a new tutorial project. If this fails because the project
+           already exists, stop and choose a different unused name:
+
+        `oc new-project template-example`{{"{{execute}}"}}
+
+        2. Process the supplied template once with an explicit VM name and save
+           the result. The output is a `List` containing a VirtualMachine:
+
+        `oc process -f rhel9-server.template.yaml -p NAME=template-base-vm -o yaml > base-vm.yaml`{{"{{execute}}"}}
+
+        Review `base-vm.yaml`, including its boot source and run strategy.
+        Treat the rendered file as sensitive: it can contain generated guest credentials.
+
+        3. Validate and create the rendered resources:
+
+        `oc create --dry-run=server -n template-example -f base-vm.yaml`{{"{{execute}}"}}
+
+        `oc create -n template-example -f base-vm.yaml`{{"{{execute}}"}}
+
+        4. Start the VM if it is stopped:
+
+        `virtctl start template-base-vm -n template-example`{{"{{execute}}"}}
+
+        `oc get vm template-base-vm -n template-example -w`{{"{{execute}}"}}
+
+        Press **Ctrl+C** when the VM shows **Running**. Depending on storage
+        binding and population behavior, the disk may wait for VM startup before
+        cloning completes. If the supplied template already starts automatically,
+        skip the start command.
+      review:
+        instructions: "Is template-base-vm Running in the tutorial project?"
+        failedTaskHelp: "Inspect oc describe vm template-base-vm -n template-example and oc get dv,pvc -n template-example. Check boot source readiness, storage binding, quota, and scheduling errors. Do not rerender to create another VM."
+      summary:
+        success: "You deployed a baseline VM from the supplied template."
+        failed: "Resolve provisioning or startup errors for the baseline VM."
+
+    - title: "Define a custom template"
+      description: |-
+        Save the following as `rhel9-custom.template.yaml`. This focused example
+        keeps the RHEL boot source, changes `runStrategy` to `Always`, and exposes
+        the guest username and password as parameters. It defines one VirtualMachine;
+        a Template can contain multiple objects.
+
+        ```yaml
+        apiVersion: template.openshift.io/v1
+        kind: Template
+        metadata:
+          name: rhel9-custom
+          namespace: template-example
+          annotations:
+            openshift.io/display-name: Custom RHEL 9 server
+            description: Tutorial RHEL 9 VM with automatic startup and a configurable guest user.
+            iconClass: icon-rhel
+            name.os.template.kubevirt.io/rhel9.0: Red Hat Enterprise Linux 9
+            defaults.template.kubevirt.io/disk: rootdisk
+          labels:
+            os.template.kubevirt.io/rhel9.0: "true"
+            workload.template.kubevirt.io/server: "true"
+            flavor.template.kubevirt.io/medium: "true"
+        objects:
+          - apiVersion: kubevirt.io/v1
+            kind: VirtualMachine
+            metadata:
+              name: ${NAME}
+              labels:
+                app: ${NAME}
+                vm.kubevirt.io/template: rhel9-custom
+            spec:
+              runStrategy: Always
+              dataVolumeTemplates:
+                - metadata:
+                    name: ${NAME}
+                  spec:
+                    sourceRef:
+                      kind: DataSource
+                      name: ${DATA_SOURCE_NAME}
+                      namespace: ${DATA_SOURCE_NAMESPACE}
+                    storage:
+                      resources:
+                        requests:
+                          storage: 30Gi
+              template:
+                metadata:
+                  labels:
+                    kubevirt.io/domain: ${NAME}
+                spec:
+                  domain:
+                    cpu:
+                      cores: 1
+                      sockets: 1
+                      threads: 1
+                    memory:
+                      guest: 4Gi
+                    features:
+                      smm:
+                        enabled: true
+                    firmware:
+                      bootloader:
+                        efi: {}
+                    devices:
+                      disks:
+                        - name: rootdisk
+                          disk:
+                            bus: virtio
+                        - name: cloudinitdisk
+                          disk:
+                            bus: virtio
+                      interfaces:
+                        - name: default
+                          model: virtio
+                          masquerade: {}
+                  networks:
+                    - name: default
+                      pod: {}
+                  volumes:
+                    - name: rootdisk
+                      dataVolume:
+                        name: ${NAME}
+                    - name: cloudinitdisk
+                      cloudInitNoCloud:
+                        userData: |-
+                          #cloud-config
+                          user: ${CLOUD_INIT_USERNAME}
+                          password: ${CLOUD_INIT_PASSWORD}
+                          chpasswd:
+                            expire: false
+        parameters:
+          - name: NAME
+            description: VM name
+            generate: expression
+            from: rhel9-custom-[a-z0-9]{6}
+          - name: DATA_SOURCE_NAME
+            description: Name of the DataSource to clone
+            value: rhel9
+          - name: DATA_SOURCE_NAMESPACE
+            description: Namespace containing the DataSource
+            value: openshift-virtualization-os-images
+          - name: CLOUD_INIT_USERNAME
+            description: Guest account created by cloud-init
+            value: shadowman
+          - name: CLOUD_INIT_PASSWORD
+            description: Generated password for the guest account
+            generate: expression
+            from: '[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}'
+        ```{{"{{copy}}"}}
+
+        Adjust the disk size if the source image requires more than 30Gi.
+        This tutorial uses inline CPU and memory settings. If you adapt it to
+        use an instancetype, remove conflicting inline compute settings.
+
+        When copying an exported template, remove server-managed metadata such
+        as `uid`, `resourceVersion`, `creationTimestamp`, `managedFields`, and
+        ownership references. Do not carry operator ownership labels or the
+        supplied template's base/version/deprecated designation into your custom
+        resource. The example above omits them and leaves the original untouched.
+      review:
+        instructions: "Did you save the custom Template with Always startup, parameterized cloud-init, and the tutorial namespace?"
+        failedTaskHelp: "Check YAML indentation and ensure each parameter reference has a matching entry in parameters. Save the complete example in the same environment as your CLI, updating the namespace if you chose a different project."
+      summary:
+        success: "You defined a reusable custom template."
+        failed: "Check and save the custom template before registering it."
+
+    - title: "Register and process the custom template"
+      description: |-
+        1. Validate and register the Template in the tutorial project:
+
+        `oc create --dry-run=server -n template-example -f rhel9-custom.template.yaml`{{"{{execute}}"}}
+
+        `oc create -n template-example -f rhel9-custom.template.yaml`{{"{{execute}}"}}
+
+        2. List its parameters and render a VM with explicit values:
+
+        `oc process --parameters rhel9-custom -n template-example`{{"{{execute}}"}}
+
+        `oc process rhel9-custom -n template-example -p NAME=template-custom-vm -p CLOUD_INIT_USERNAME=shadowman -o yaml > custom-vm.yaml`{{"{{execute}}"}}
+
+        3. Review the saved output. Confirm the name is `template-custom-vm`,
+           the run strategy is `Always`, the user is `shadowman`, and the
+           parameter references have been replaced. Keep this rendered file
+           private because it includes a generated password.
+
+        Registering a Template does not create a VM. Processing it renders the
+        objects; creating those rendered objects allocates the VM and its disks.
+
+        In **Virtualization → Templates**, select the tutorial project to find
+        `rhel9-custom`. Publishing a template in `openshift` for wider console
+        availability requires appropriate administrator permissions and is
+        outside this tutorial.
+      review:
+        instructions: "Does oc get template rhel9-custom -n template-example find your template, and does custom-vm.yaml contain the resolved VM values?"
+        failedTaskHelp: "Check the template's namespace and parameter names. If processing reports an undefined parameter, correct the reference or definition and update your registered template before processing again."
+      summary:
+        success: "You registered the template and rendered a VM from it."
+        failed: "Resolve template registration or parameter errors."
+
+    - title: "Launch and verify the customized VM"
+      description: |-
+        1. Validate the rendered VirtualMachine, then create it:
+
+        `oc create --dry-run=server -n template-example -f custom-vm.yaml`{{"{{execute}}"}}
+
+        `oc create -n template-example -f custom-vm.yaml`{{"{{execute}}"}}
+
+        2. Watch startup and press **Ctrl+C** when the VM is **Running**:
+
+        `oc get vm template-custom-vm -n template-example -w`{{"{{execute}}"}}
+
+        The `Always` run strategy starts this VM without a separate start command.
+
+        3. Inspect the running VMI and its allocated disks:
+
+        `oc get vmi template-custom-vm -n template-example -o yaml`{{"{{execute}}"}}
+
+        `oc get dv,pvc -n template-example`{{"{{execute}}"}}
+
+        Check the VMI's CPU and memory configuration against the custom template.
+        You now have two VMs with separate cloned disks, created from the same
+        boot source using different templates.
+      review:
+        instructions: "Is template-custom-vm Running without a manual start, with the expected compute configuration?"
+        failedTaskHelp: "Check oc describe vm template-custom-vm -n template-example and related DataVolume/PVC events. Review runStrategy, boot source, disk size, quota, and compute availability."
+      summary:
+        success: "You verified the custom template's startup and compute settings."
+        failed: "Resolve validation or provisioning errors for the custom VM."
+
+    - title: "Log in to the customized guest"
+      description: |-
+        1. Privately open `custom-vm.yaml` in your editor. In the cloud-init
+           `userData`, find the generated password for `shadowman`. Do not
+           share the rendered credentials in tickets, screenshots, or version control.
+        2. Connect to the custom VM's serial console:
+
+        `virtctl console template-custom-vm -n template-example`{{"{{execute}}"}}
+
+        3. Press **Enter** to display the login prompt and log in as `shadowman`
+           with the generated password. Allow time for cloud-init to finish.
+        4. Run `whoami` inside the guest to verify the custom username.
+        5. Press **Ctrl+]** to exit the serial console and return to your CLI shell.
+
+        If your image does not expose a serial login console, use the VM's
+        **Console** tab in the web console and select VNC instead.
+      review:
+        instructions: "Did you log in to the custom VM and verify the shadowman account?"
+        failedTaskHelp: "Confirm the VM is Running and that cloud-init has completed. Use the credentials in the exact rendered file you created; processing again generates a different password that will not update the existing guest. Check guest cloud-init logs through console access if login still fails."
+      summary:
+        success: "You verified the template's custom guest account."
+        failed: "Check the applied cloud-init data and guest console access."
+
+    - title: "Clean up the tutorial resources"
+      description: |-
+        After exiting the guest console, decide whether to keep the project for
+        further practice or remove it.
+
+        Before deleting anything, confirm that this is the project you created
+        solely for this walkthrough and review its contents:
+
+        `oc get vm,template,dv,pvc -n template-example`{{"{{execute}}"}}
+
+        If it contains only tutorial resources and you no longer need their
+        data, switch away from it and delete the project:
+
+        `oc project default`{{"{{execute}}"}}
+
+        `oc delete project template-example`{{"{{execute}}"}}
+
+        **Deleting the project permanently removes both VMs, their disks, the
+        custom Template, and every other resource in that project.** It does not
+        remove the supplied template or the golden image in their source projects.
+
+        Remove the local rendered VM files containing passwords when no longer
+        needed. If you retain the project, stop the test VMs when idle; their disks
+        still consume storage.
+      review:
+        instructions: "Did you delete the dedicated tutorial project, or deliberately retain it and stop its test VMs?"
+        failedTaskHelp: "If you chose deletion, use oc get project template-example to check whether it is still terminating or is NotFound. Check finalizers with your administrator if deletion stalls. Do not delete an unrelated project or force-remove finalizers without understanding their purpose."
+      summary:
+        success: "You chose how to retain or clean up the tutorial resources."
+        failed: "Verify the project and VM state matches your cleanup choice."
+  conclusion: |-
+    You inspected a supplied VM template, deployed a baseline VM, defined and
+    registered a custom template, and tested its automatic startup and guest user.
+
+    Templates package reusable machine definitions. Parameters provide the values
+    that vary between deployments; `oc process` resolves those values into resource
+    manifests. Saving a processed manifest once also preserves the exact generated
+    credentials used for that deployment.
+
+    Continue with **VM Instancetypes & Preferences** to explore reusable compute
+    profiles and OS settings.
+  nextQuickStart: []
+{{- end }}

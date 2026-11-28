@@ -1,0 +1,96 @@
+---
+plugin:
+  name: console-demos-ocp-virtualization
+  description: ""
+  image: ""
+  imagePullPolicy: IfNotPresent
+  imagePullSecrets: []
+  replicas: 2
+  port: 9443
+  securityContext:
+    enabled: true
+  podSecurityContext:
+    enabled: true
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    enabled: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+  resources:
+    requests:
+      cpu: 10m
+      memory: 50Mi
+  basePath: /
+  certificateSecretName: ""
+  serviceAccount:
+    create: true
+    annotations: {}
+    name: ""
+  patcherServiceAccount:
+    create: true
+    annotations: {}
+    name: ""
+  quickStarts:
+    multi-disk-configuration:
+      enabled: true
+    node-placement-affinity:
+      enabled: true
+    vm-export-import:
+      enabled: true
+    windows-golden-images:
+      enabled: true
+    windows-vm-virtio-drivers:
+      enabled: true
+    ssh-access-windows-vms:
+      enabled: true
+    network-policies-vms:
+      enabled: true
+    virtctl-basics:
+      enabled: true
+    vm-ingress-routes:
+      enabled: true
+    static-ip-configuration:
+      enabled: true
+    install-configure-ocpv-operator:
+      enabled: true
+    install-lvm-storage-operator:
+      enabled: true
+    vm-templates:
+      enabled: true
+    create-vm-web-console:
+      enabled: true
+    create-vm-cli-yaml:
+      enabled: true
+    vm-instancetypes-and-preferences:
+      enabled: true
+    vm-lifecycle-states:
+      enabled: true
+    cloning-vms:
+      enabled: true
+    cloud-init-fundamentals:
+      enabled: true
+    vm-monitoring-metrics:
+      enabled: true
+  jobs:
+    patchConsoles:
+      enabled: true
+      image: "registry.redhat.io/openshift4/ose-tools-rhel9@sha256:ee65b244fc94d5765514c604dc0a288517dcdce68de65128d047622b6b30a618"
+      podSecurityContext:
+        enabled: true
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containerSecurityContext:
+        enabled: true
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+            - ALL
+      resources:
+        requests:
+          cpu: 10m
+          memory: 50Mi
