@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "console-demos-ocp-virtualization.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "console-demos-ocp-virtualization.labels" . | nindent 4 }}
+    app.openshift.io/runtime-namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.plugin.replicas }}
+  selector:
+    matchLabels:
+      {{- include "console-demos-ocp-virtualization.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+            {{- include "console-demos-ocp-virtualization.labels" . | nindent 8 }}
+    spec:
+      {{- with .Values.plugin.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ template "console-demos-ocp-virtualization.name" . }}
+          image: {{ required "Plugin image must be specified!" .Values.plugin.image }}
+          ports:
+            - containerPort: {{ .Values.plugin.port }}
+              protocol: TCP
+          imagePullPolicy: {{ .Values.plugin.imagePullPolicy }}
+          {{- if and (.Values.plugin.securityContext.enabled) (.Values.plugin.containerSecurityContext) }}
+          securityContext: {{ tpl (toYaml (omit .Values.plugin.containerSecurityContext "enabled")) $ | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.plugin.resources | nindent 12 }}
+          volumeMounts:
+            - name: {{ template "console-demos-ocp-virtualization.certificateSecret" . }}
+              readOnly: true
+              mountPath: /var/cert
+            - name: nginx-conf
+              readOnly: true
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+      volumes:
+        - name: {{ template "console-demos-ocp-virtualization.certificateSecret" . }}
+          secret:
+            secretName: {{ template "console-demos-ocp-virtualization.certificateSecret" . }}
+            defaultMode: 420
+        - name: nginx-conf
+          configMap:
+            name: {{ template "console-demos-ocp-virtualization.name" . }}
+            defaultMode: 420
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
+      {{- if and (.Values.plugin.securityContext.enabled) (.Values.plugin.podSecurityContext) }}
+      securityContext: {{ tpl (toYaml (omit .Values.plugin.podSecurityContext "enabled")) $ | nindent 8 }}
+      {{- end }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%

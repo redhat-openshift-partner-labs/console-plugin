@@ -1,0 +1,196 @@
+{{- if (index .Values.plugin.quickStarts "create-vm-web-console").enabled }}
+apiVersion: console.openshift.io/v1
+kind: ConsoleQuickStart
+metadata:
+  name: create-vm-web-console
+  labels:
+    {{- include "console-demos-ocp-virtualization.labels" . | nindent 4 }}
+spec:
+  displayName: "Create a VM from the web console"
+  description: "Create, access, and manage a virtual machine using an OpenShift Virtualization template."
+  durationMinutes: 25
+  tags:
+    - virtualization
+    - kubevirt
+    - templates
+  prerequisites:
+    - "OpenShift 4.19+ with the OpenShift Virtualization operator installed"
+    - "Web console access and permission to create and manage VMs and disks in a project"
+    - "A default StorageClass suitable for VM disks and sufficient storage and compute capacity"
+    - "A template with an available boot source, such as Fedora"
+  introduction: |-
+    Create a test VM from a pre-built template, customize its resources, and
+    connect to its console. This walkthrough uses `fedora-test-vm`; choose a
+    different name if that VM already exists in your project.
+
+    A **Template** supplies the VM definition and default settings. Its boot
+    source **DataSource** points to an OS image. A **DataVolume** manages cloning
+    that image into a **PersistentVolumeClaim (PVC)** in your project. When the
+    VM starts, a **virt-launcher pod** runs it, and a **VirtualMachineInstance
+    (VMI)** represents the running machine.
+
+    Provisioning time depends on the image size and storage backend. Navigation
+    labels and available actions can vary with your OpenShift release and permissions.
+  tasks:
+    - title: "Open VirtualMachines and select a project"
+      description: |-
+        1. In the web console navigation, open **Virtualization → VirtualMachines**.
+        2. Select a project where you can create a test VM. Avoid using system projects.
+        3. Review the VM list and confirm that `fedora-test-vm` is not already in use.
+      review:
+        instructions: "Can you see the VirtualMachines list in your chosen project?"
+        failedTaskHelp: "Check that OpenShift Virtualization is installed and that you have access to the project. Ask your administrator for a suitable project if needed."
+      summary:
+        success: "You selected a project for your test VM."
+        failed: "Open the VirtualMachines list and select an accessible project."
+
+    - title: "Choose a template with an available boot source"
+      description: |-
+        1. Click **Create → From template**. If your release opens the catalog,
+           select **Template catalog**.
+        2. Browse the operating system templates and select a **Fedora** template
+           marked **Source available**. If Fedora is unavailable, choose another
+           Linux template with a ready boot source and adapt the VM name.
+        3. Review the template's CPU, memory, disk, and boot source defaults.
+        4. Click **Customize VirtualMachine** to review and adjust the settings.
+
+        **Quick create VirtualMachine** creates a VM with the template defaults.
+        Use customization for this walkthrough so you can inspect the configuration
+        before allocating resources.
+      review:
+        instructions: "Did you open customization for a Linux template with an available boot source?"
+        failedTaskHelp: "If no template shows Source available, ask your administrator to check boot source DataSources and image imports in openshift-virtualization-os-images, and the default StorageClass."
+      summary:
+        success: "You selected a template with a ready boot source."
+        failed: "Choose a template with an available boot source before continuing."
+
+    - title: "Customize and create the VM"
+      description: |-
+        1. Set **Name** to `fedora-test-vm` (or your chosen unused name) and
+           confirm the destination **Project**.
+        2. Review the **Boot source**, **CPU**, and **Memory** settings. Keep
+           suitable template defaults or adjust them within your project's quota.
+        3. In **Disks**, review the root disk size and StorageClass. Ensure the
+           disk is large enough for the source image and the storage is appropriate
+           for VM workloads.
+        4. If you want to log in to the guest OS, review the cloud-init settings
+           under **Scripts** and configure your own credentials or SSH key as needed.
+           Do not assume the template supplies a default password.
+        5. Review the settings and select **Start this VirtualMachine after creation**
+           if available, then click **Create VirtualMachine**.
+
+        Creating the VM allocates storage in your project. The source image is
+        cloned into a separate disk; your VM does not modify the golden image.
+      review:
+        instructions: "Does the VM details page show your chosen VM name and project?"
+        failedTaskHelp: "Review any form validation errors, ensure the name is unused, and check project permissions, resource quota, boot source availability, and StorageClass settings."
+      summary:
+        success: "You created a VM with reviewed compute and storage settings."
+        failed: "Resolve the creation errors and submit the VM again."
+
+    - title: "Monitor provisioning and start the VM"
+      description: |-
+        1. On the VM details page, watch the status while the boot disk is provisioned.
+           Open **Events** to inspect progress and errors.
+        2. If the VM is stopped after disk provisioning, click **Actions → Start**.
+        3. Wait for the VM to reach **Running**. Disk cloning and startup can take
+           several minutes; some intermediate states may pass too quickly to see.
+
+        If provisioning stalls, inspect the disk's DataVolume and PVC status and
+        the related events. A pending disk can indicate a storage or quota problem;
+        startup failures can indicate insufficient compute capacity.
+      review:
+        instructions: "Does your VM show Running?"
+        failedTaskHelp: "Check Events and disk status for import, clone, storage, scheduling, or quota errors. Confirm the boot source is ready and start the VM if it is stopped."
+      summary:
+        success: "Your VM is running."
+        failed: "Resolve provisioning or startup errors before opening the console."
+
+    - title: "Connect to the guest console"
+      description: |-
+        1. Open the VM's **Console** tab and select the **VNC console** if needed.
+        2. Wait for the guest's boot screen or login prompt.
+        3. If guest credentials are displayed, use the credentials configured for
+           this VM. Otherwise, use the cloud-init credentials you supplied.
+        4. Review the console controls, including **Send key** and **Disconnect**.
+
+        Viewing the console does not require logging in to the guest. If the image
+        has no configured user credentials, you can finish this task by confirming
+        that the guest display loads. Use SSH or RDP for regular remote access when
+        configured for your guest OS.
+      review:
+        instructions: "Can you see the guest's boot screen or login prompt in the console?"
+        failedTaskHelp: "Confirm the VM is Running, reconnect the VNC console, and check console access permissions. If login fails, review the image and cloud-init configuration rather than assuming a default password."
+      summary:
+        success: "You connected to the VM's browser console."
+        failed: "Check the VM state and reconnect its console."
+
+    - title: "Practice VM lifecycle operations"
+      description: |-
+        Perform these operations only on the test VM created in this walkthrough.
+
+        1. Click **Actions → Stop** and confirm if prompted. Wait for the VM to stop.
+        2. Click **Actions → Start** and wait for **Running** again.
+        3. Click **Actions → Restart**, then wait for the VM to return to **Running**.
+        4. If available, try **Actions → Pause**, then **Actions → Unpause**.
+           Pausing preserves the guest's state in memory and still consumes node memory.
+
+        Stopping or restarting interrupts guest workloads and disconnects the console.
+      review:
+        instructions: "Did you stop and start the test VM, and is it Running again after the lifecycle operations?"
+        failedTaskHelp: "Wait for each operation to finish before selecting the next action. Check Events if the VM does not return to Running. Skip Pause/Unpause if your release or permissions do not expose them."
+      summary:
+        success: "You practiced lifecycle operations on your test VM."
+        failed: "Check the VM state and complete the stop/start cycle."
+
+    - title: "Inspect VM details and metrics"
+      description: |-
+        1. Open **Overview** to inspect status, resource settings, devices, and
+           available IP address information.
+        2. Open **Metrics** to review the available CPU, memory, network, and
+           storage charts. Allow time for monitoring data to appear.
+        3. Open **YAML** to inspect the VirtualMachine manifest. Locate the VM name,
+           boot disk configuration, and compute settings or instancetype reference.
+           You do not need to edit or save the manifest for this task.
+
+        Guest details such as IP addresses and some guest metrics depend on the
+        QEMU guest agent. Missing guest data does not by itself mean the VM has failed.
+      review:
+        instructions: "Did you inspect Overview, the available metrics, and the VirtualMachine YAML?"
+        failedTaskHelp: "Confirm the VM is Running and allow time for metrics collection. Ask your administrator about monitoring or guest agent setup if expected data is missing."
+      summary:
+        success: "You located the VM's configuration and monitoring views."
+        failed: "Review the VM details and available monitoring data."
+
+    - title: "Keep or remove the test VM"
+      description: |-
+        Decide whether you need the VM for further practice.
+
+        - **Keep it:** stop the VM to release running compute resources. Its disks
+          remain allocated and continue to consume storage.
+        - **Remove it:** on this test VM only, select **Actions → Delete**. Review
+          the associated disk choices before confirming. Delete its disks only if
+          you no longer need their data; deletion is permanent.
+
+        To reuse a disk later, clear its deletion option if the dialog offers one.
+        Verify the retained disk separately under **Storage → PersistentVolumeClaims**.
+        Do not delete the project or any unrelated resources.
+      review:
+        instructions: "Is your test VM stopped for later use or deleted, with its disks retained or removed as you intended?"
+        failedTaskHelp: "Check the VirtualMachines list and the project's PVCs. If you deleted the VM but retained unwanted disks, review their names and ownership before deleting them separately."
+      summary:
+        success: "You chose how to manage the test VM and its storage after the walkthrough."
+        failed: "Confirm the VM and disk state matches your cleanup choice."
+  conclusion: |-
+    You created a VM from a template, reviewed its resources, monitored provisioning,
+    connected to its console, and practiced lifecycle operations.
+
+    Use **Quick create** when template defaults suit a test VM, **customization**
+    when you need different resources, and **YAML manifests** for automation or
+    configurations that require full control. Custom templates let teams reuse
+    approved configurations.
+
+    Continue with the **Create custom VM templates** or
+    **VM Instancetypes & Preferences** walkthrough in Virtualization Demos.
+  nextQuickStart: []
+{{- end }}

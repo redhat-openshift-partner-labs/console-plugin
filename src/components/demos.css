@@ -1,12 +1,12 @@
-.partner-labs-console-plugin__toolbar {
+.console-demos-ocp-virtualization__toolbar {
   margin: var(--pf-t--global--spacer--lg) 0;
 }
 
-.partner-labs-console-plugin__kind-scroll {
+.console-demos-ocp-virtualization__kind-scroll {
   max-width: 100%;
   overflow-x: auto;
 }
 
-.partner-labs-console-plugin__activity {
+.console-demos-ocp-virtualization__activity {
   margin-top: var(--pf-t--global--spacer--lg);
 }

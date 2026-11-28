@@ -2,7 +2,7 @@ import { execFileSync } from 'child_process';
 import { test, expect } from '@playwright/test';
 import { checkErrors } from '../support';
 
-const PLUGIN_NAME = 'partner-labs-console-plugin';
+const PLUGIN_NAME = 'console-demos-ocp-virtualization';
 // Defined in openshift/release ci-operator config as CYPRESS_PLUGIN_TEMPLATE_PULL_SPEC
 const PLUGIN_TEMPLATE_PULL_SPEC =
   process.env.PLUGIN_TEMPLATE_PULL_SPEC ?? process.env.CYPRESS_PLUGIN_TEMPLATE_PULL_SPEC;
@@ -25,7 +25,7 @@ function installHelmChart(helmPath: string) {
     'upgrade',
     '-i',
     PLUGIN_NAME,
-    'charts/partner-labs-console-plugin',
+    'charts/console-demos-ocp-virtualization',
     '-n',
     PLUGIN_NAME,
     '--create-namespace',
