@@ -1,0 +1,202 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1262 820" width="1262" height="820" role="img" aria-labelledby="title desc">
+  <title id="title">Walkthrough card wiring</title>
+  <desc id="desc">In the plugin image: the card registry src/cards.yaml holds id, quickStartId, kind, topic, and durationMinutes; src/data/cards.ts loads the registry as a typed DemoCard list; DemosPage.tsx renders the gallery where the user clicks the card; the launch calls setActiveQuickStart(card.quickStartId) from useQuickStartContext and selects my-demo in the OpenShift Console. In the Helm chart: the install switch plugin.quickStarts.my-demo.enabled in values.yaml, when true, renders the CR template templates/virt-cookbook/my-demo.yaml with metadata.name my-demo; Helm installs the cluster-scoped ConsoleQuickStart resource named my-demo, which supplies the walkthrough content the Console displays. Constraints: the card id, quickStartId, template filename, metadata.name, and Helm switch use one name; the card durationMinutes must equal spec.durationMinutes, and topic is one of setup, create, operate, networking, windows; yarn start does not install the resource and the gallery does not check whether it exists; enabled false omits the resource but leaves the card in the bundle.</desc>
+
+  <style>
+    .bg { fill: #ffffff; stroke: #d0d7de; }
+    .frame { fill: #f6f8fa; stroke: #d0d7de; }
+    .t { fill: #1f2328; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+    .m { fill: #59636e; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+    .c { fill: #1f2328; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .h1 { font-size: 24px; font-weight: 700; }
+    .h2 { font-size: 14px; font-weight: 650; }
+    .lbl { font-size: 11px; font-weight: 700; letter-spacing: 1.2px; }
+    .b { font-size: 12px; }
+    .s { font-size: 11px; }
+    .k { font-weight: 650; }
+
+    .src  { fill: #e6f6f4; stroke: #1f8f84; }
+    .gate { fill: #fff4e0; stroke: #c27c0e; }
+    .core { fill: #ecf2ff; stroke: #3b6fd8; }
+    .out  { fill: #f3ecff; stroke: #7a4fd6; }
+    .store{ fill: #eaf7ec; stroke: #2e8b46; }
+    .deny { fill: #fdecec; stroke: #d1242f; }
+    .user { fill: #f6f8fa; stroke: #6e7781; }
+
+    /* badge fills are darker than card strokes so the white digit reaches 4.5:1 */
+    .badge-src  { fill: #1c8278; }
+    .badge-gate { fill: #a3680c; }
+    .badge-core { fill: #3b6fd8; }
+    .badge-out  { fill: #7a4fd6; }
+    .badge-store{ fill: #2c8543; }
+    .badge-t    { fill: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 700; }
+
+    .flow  { stroke: #57606a; stroke-width: 1.8; fill: none; }
+    .ctl   { stroke: #6e7781; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .link  { stroke: #6e7781; stroke-width: 1.6; fill: none; }
+    .rule  { stroke: #d0d7de; stroke-width: 1; }
+    .ah-flow { fill: #57606a; }
+    .ah-ctl  { fill: #6e7781; }
+    .x { stroke: #d1242f; stroke-width: 2; }
+
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d1117; stroke: #30363d; }
+      .frame { fill: #151b23; stroke: #30363d; }
+      .t, .c { fill: #e6edf3; }
+      .m { fill: #9198a1; }
+      .src  { fill: #0f2a28; stroke: #3fb8a9; }
+      .gate { fill: #2e2310; stroke: #e3a33b; }
+      .core { fill: #14213d; stroke: #6d9bff; }
+      .out  { fill: #251a40; stroke: #a888ff; }
+      .store{ fill: #112a19; stroke: #4cc06a; }
+      .deny { fill: #3a1417; stroke: #ff6b6b; }
+      .user { fill: #161b22; stroke: #6e7681; }
+      .badge-src  { fill: #3fb8a9; }
+      .badge-gate { fill: #e3a33b; }
+      .badge-core { fill: #6d9bff; }
+      .badge-out  { fill: #a888ff; }
+      .badge-store{ fill: #4cc06a; }
+      .badge-t    { fill: #0d1117; }
+      .flow  { stroke: #8b949e; }
+      .ctl   { stroke: #768390; }
+      .link  { stroke: #768390; }
+      .rule  { stroke: #30363d; }
+      .ah-flow { fill: #8b949e; }
+      .ah-ctl  { fill: #768390; }
+      .x { stroke: #ff6b6b; }
+    }
+  </style>
+
+  <defs>
+    <marker id="a-flow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-flow" d="M0 0 L10 5 L0 10 z"/></marker>
+    <marker id="a-ctl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="ah-ctl" d="M0 0 L10 5 L0 10 z"/></marker>
+  </defs>
+
+  <!-- Canvas -->
+  <rect class="bg" x="0.5" y="0.5" width="1261" height="819" rx="16"/>
+
+  <!-- Title -->
+  <text class="t h1" x="40" y="46">Walkthrough card wiring</text>
+  <text class="m b" x="40" y="68">The plugin image supplies the launch card; the Helm chart installs the ConsoleQuickStart the Console displays.</text>
+
+  <!-- ===== Constraints band ===== -->
+  <text class="m lbl" x="40" y="90">CONSTRAINTS</text>
+  <rect class="frame" x="40" y="98" width="1182" height="156" rx="12"/>
+  <text class="t b k" x="56" y="128">One name</text>
+  <text class="m b" x="230" y="128">the card id, quickStartId, template filename, metadata.name, and the Helm switch use the same name</text>
+  <line class="rule" x1="56" y1="142" x2="1206" y2="142"/>
+  <text class="t b k" x="56" y="160">Labels</text>
+  <text class="m b" x="230" y="160">durationMinutes must equal spec.durationMinutes; topic is one of setup, create, operate, networking, windows</text>
+  <line class="rule" x1="56" y1="174" x2="1206" y2="174"/>
+  <text class="t b k" x="56" y="192">Local server</text>
+  <text class="m b" x="230" y="192">yarn start does not install the resource, and the gallery does not check whether it exists</text>
+  <line class="rule" x1="56" y1="206" x2="1206" y2="206"/>
+  <text class="t b k" x="56" y="224">Disabled switch</text>
+  <text class="m b" x="230" y="224">enabled: false omits the resource but leaves the card in the bundle</text>
+
+  <!-- ===== Plugin image frame ===== -->
+  <rect class="frame" x="24" y="296" width="1214" height="192" rx="14"/>
+  <rect class="bg" x="560" y="286" width="140" height="20" rx="10"/>
+  <text class="m lbl" x="572" y="300">PLUGIN IMAGE</text>
+
+  <!-- 1 Card registry -->
+  <rect class="src" x="40" y="318" width="264" height="140" rx="12"/>
+  <circle class="badge-src" cx="58" cy="338" r="10"/><text class="badge-t" x="58" y="342" text-anchor="middle">1</text>
+  <text class="t h2" x="74" y="343">Card registry</text>
+  <line class="rule" x1="52" y1="358" x2="292" y2="358"/>
+  <text class="c s" x="52" y="380">src/cards.yaml</text>
+  <text class="c s" x="52" y="398">id, quickStartId, kind</text>
+  <text class="c s" x="52" y="440">topic, durationMinutes</text>
+
+  <!-- 2 Card loader -->
+  <rect class="src" x="346" y="318" width="264" height="140" rx="12"/>
+  <circle class="badge-src" cx="364" cy="338" r="10"/><text class="badge-t" x="364" y="342" text-anchor="middle">2</text>
+  <text class="t h2" x="380" y="343">Card loader</text>
+  <line class="rule" x1="358" y1="358" x2="598" y2="358"/>
+  <text class="c s" x="358" y="380">src/data/cards.ts</text>
+  <text class="t b" x="358" y="398">loads the registry</text>
+  <text class="c s" x="358" y="440">DemoCard[]</text>
+
+  <!-- 3 Gallery -->
+  <rect class="core" x="652" y="318" width="264" height="140" rx="12"/>
+  <circle class="badge-core" cx="670" cy="338" r="10"/><text class="badge-t" x="670" y="342" text-anchor="middle">3</text>
+  <text class="t h2" x="686" y="343">Gallery</text>
+  <line class="rule" x1="664" y1="358" x2="904" y2="358"/>
+  <text class="c s" x="664" y="380">DemosPage.tsx</text>
+  <text class="t b" x="664" y="398">the user clicks the card</text>
+
+  <!-- 4 Launch -->
+  <rect class="core" x="958" y="318" width="264" height="140" rx="12"/>
+  <circle class="badge-core" cx="976" cy="338" r="10"/><text class="badge-t" x="976" y="342" text-anchor="middle">4</text>
+  <text class="t h2" x="992" y="343">Launch</text>
+  <line class="rule" x1="970" y1="358" x2="1210" y2="358"/>
+  <text class="c s" x="970" y="380">useQuickStartContext</text>
+  <text class="c s" x="970" y="398">setActiveQuickStart</text>
+  <text class="c s" x="970" y="416">(card.quickStartId)</text>
+
+  <!-- ===== Helm chart frame ===== -->
+  <rect class="frame" x="24" y="530" width="512" height="192" rx="14"/>
+  <rect class="bg" x="200" y="520" width="120" height="20" rx="10"/>
+  <text class="m lbl" x="212" y="534">HELM CHART</text>
+
+  <!-- 5 Install switch -->
+  <rect class="src" x="40" y="552" width="190" height="140" rx="12"/>
+  <circle class="badge-src" cx="58" cy="572" r="10"/><text class="badge-t" x="58" y="576" text-anchor="middle">5</text>
+  <text class="t h2" x="74" y="577">Install switch</text>
+  <line class="rule" x1="52" y1="592" x2="218" y2="592"/>
+  <text class="c s" x="52" y="614">values.yaml</text>
+  <text class="c s" x="52" y="632">plugin.quickStarts</text>
+  <text class="c s" x="52" y="650">.my-demo.enabled</text>
+
+  <!-- 6 CR template -->
+  <rect class="src" x="330" y="552" width="190" height="140" rx="12"/>
+  <circle class="badge-src" cx="348" cy="572" r="10"/><text class="badge-t" x="348" y="576" text-anchor="middle">6</text>
+  <text class="t h2" x="364" y="577">CR template</text>
+  <line class="rule" x1="342" y1="592" x2="508" y2="592"/>
+  <text class="c s" x="342" y="614">virt-cookbook/</text>
+  <text class="c s" x="342" y="632">my-demo.yaml</text>
+  <text class="c s" x="342" y="674">metadata.name: my-demo</text>
+
+  <!-- 7 ConsoleQuickStart -->
+  <rect class="store" x="626" y="552" width="214" height="140" rx="12"/>
+  <circle class="badge-store" cx="644" cy="572" r="10"/><text class="badge-t" x="644" y="576" text-anchor="middle">7</text>
+  <text class="t h2" x="660" y="577">ConsoleQuickStart</text>
+  <line class="rule" x1="638" y1="592" x2="828" y2="592"/>
+  <text class="t b" x="638" y="614">cluster scoped</text>
+  <text class="c s" x="638" y="632">metadata.name: my-demo</text>
+  <text class="m s" x="638" y="674">installed by Helm</text>
+
+  <!-- 8 OpenShift Console -->
+  <rect class="out" x="958" y="552" width="264" height="140" rx="12"/>
+  <circle class="badge-out" cx="976" cy="572" r="10"/><text class="badge-t" x="976" y="576" text-anchor="middle">8</text>
+  <text class="t h2" x="992" y="577">OpenShift Console</text>
+  <line class="rule" x1="970" y1="592" x2="1210" y2="592"/>
+  <text class="t b" x="970" y="614">displays the walkthrough</text>
+  <text class="m s" x="970" y="674">Quick Start drawer</text>
+
+  <!-- Edges -->
+  <path class="flow" d="M304 388 H344" marker-end="url(#a-flow)"/>
+  <path class="flow" d="M610 388 H650" marker-end="url(#a-flow)"/>
+  <path class="flow" d="M916 388 H956" marker-end="url(#a-flow)"/>
+  <path class="flow" d="M1090 458 V550" marker-end="url(#a-flow)"/>
+  <text class="m s" x="1098" y="510">selects my-demo</text>
+  <path class="flow" d="M230 622 H328" marker-end="url(#a-flow)"/>
+  <text class="m s" x="238" y="612">enabled: true</text>
+  <path class="flow" d="M520 622 H624" marker-end="url(#a-flow)"/>
+  <text class="m s" x="544" y="612">Helm installs</text>
+  <path class="flow" d="M840 622 H956" marker-end="url(#a-flow)"/>
+  <text class="m s" x="848" y="612">walkthrough content</text>
+
+  <!-- ===== Legend ===== -->
+  <line class="rule" x1="40" y1="754" x2="1222" y2="754"/>
+  <path class="flow" d="M40 782 H76" marker-end="url(#a-flow)"/>
+  <text class="m s" x="86" y="786">data and click path</text>
+  <rect class="src" x="250" y="774" width="22" height="16" rx="4"/>
+  <text class="m s" x="280" y="786">definitions and loaders</text>
+  <rect class="core" x="440" y="774" width="22" height="16" rx="4"/>
+  <text class="m s" x="470" y="786">plugin component</text>
+  <rect class="store" x="610" y="774" width="22" height="16" rx="4"/>
+  <text class="m s" x="640" y="786">cluster resource</text>
+  <rect class="out" x="770" y="774" width="22" height="16" rx="4"/>
+  <text class="m s" x="800" y="786">Console</text>
+</svg>
