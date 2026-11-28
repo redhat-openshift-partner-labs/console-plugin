@@ -13,10 +13,6 @@ toolbar filters by them.
 
 To add a walkthrough card, follow the [ConsoleQuickStart demo wiring guide](how-to-create-consolequickstart-demo.md).
 
-Use the project selector above the Demos tabs to change the active Console
-project. Activity shows the labeled resources in that project; **All projects**
-shows none.
-
 The route `$codeRef` values in `console-extensions.json` must match
 `consolePlugin.exposedModules` in `package.json`. Run `yarn i18n` after changing
 translated strings.
@@ -51,27 +47,53 @@ prefix, and Helm values.
 
 ## Requirements
 
-- OpenShift Console 4.19 or newer. This build uses the 4.19 Console plugin SDK
-  and PatternFly 6. It supports the 4.19–4.21 compatibility router and the
-  4.22+ router bridge.
-  Console 4.22 changed its shared React, router, and i18n versions, so validate
-  the plugin on each Console release you deploy to.
-- Node.js 24 and Yarn 4 for building the plugin. Use the version in `.nvmrc`
-  for local development; the Docker image, CI, and devcontainer also use Node.js 24.
-- An OpenShift cluster and `oc` login for running it in the console.
+| Requirement               | Version                                   | Needed for                                                                        |
+| ------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------- |
+| OpenShift Console         | 4.19 or newer                             | Running the plugin. This build uses the 4.19 Console plugin SDK and PatternFly 6. |
+| Node.js                   | 24, from `.nvmrc`                         | Building the plugin. The Docker image, CI, and devcontainer also use Node.js 24.  |
+| Yarn                      | 4.18.0, checked in under `.yarn/releases` | `make install` and every `yarn` script.                                           |
+| Helm                      | 3.17 or newer                             | `make deploy`, which passes `--take-ownership`, and `yarn validate:quickstarts`.  |
+| `oc` with a cluster login |                                           | `yarn start-console` and deployment.                                              |
+| Podman or Docker          |                                           | The local Console container and the image build.                                  |
 
-The walkthrough card requires the `ConsoleQuickStart` resource installed by the
-Helm chart. Running only the local plugin server does not install that resource.
+The build supports the 4.19–4.21 compatibility router and the 4.22+ router
+bridge. Console 4.22 changed its shared React, router, and i18n versions, so
+validate the plugin on each Console release you deploy to.
+
+Every card's walkthrough requires the `ConsoleQuickStart` resource installed by
+the Helm chart. Running only the local plugin server installs none of them.
 
 ## Develop
 
-```sh
-make install
-yarn start
+1. Run `make install`.
+2. Run `yarn start`. The webpack dev server listens on port 9001.
+3. Run `oc login` against the cluster.
+4. In another terminal, run `yarn start-console`.
+5. Open <http://localhost:9000/console-demos-ocp-virtualization>.
+
+![Local development topology: the developer browser opens the Console container on port 9000, which loads plugin assets from the webpack dev server on port 9001 and reaches the cluster API server with the oc token.](docs/images/local-dev.svg)
+
+<details>
+<summary>Diagram source</summary>
+
+```mermaid
+flowchart LR
+    dev([Developer browser]) -->|"http://localhost:9000/console-demos-ocp-virtualization"| console["Console container<br/>quay.io/openshift/origin-console:latest<br/>port 9000<br/>yarn start-console"]
+    console -->|"BRIDGE_PLUGINS<br/>plugin assets"| wds["webpack dev server<br/>yarn start<br/>port 9001<br/>serves dist/ with CORS headers"]
+    console -->|"bearer token from oc whoami --show-token"| api["Cluster API server<br/>endpoint from oc whoami --show-server"]
+    files["Source files<br/>src/, locales/, console-extensions.json"] -->|"built on change"| wds
+    %% Login first: run oc login before yarn start-console
+    %% Quick Starts: ConsoleQuickStart resources are not installed by the local server
+    %% Extensions: console-extensions.json changes require restarting yarn start
+    %% Auth: Console user auth is disabled; requests use the oc token
+    %% Plugin host: podman host.containers.internal, docker host.docker.internal, container bridge100 address, podman on Linux localhost with --network=host
 ```
 
-After `oc login`, run `yarn start-console` in another terminal and open
-<http://localhost:9000/console-demos-ocp-virtualization>.
+</details>
+
+Use the project selector above the Demos tabs to change the active Console
+project. Activity shows the labeled resources in that project; **All projects**
+shows none.
 
 Run `make help` to see the available workflows. `make check` runs linting,
 unit tests, Quick Start validation, and the plugin build. Note that the existing
