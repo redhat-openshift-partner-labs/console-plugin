@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1262 820" width="1262" height="820" role="img" aria-labelledby="title desc">
-  <title id="title">Walkthrough card wiring</title>
-  <desc id="desc">In the plugin image: the card registry src/cards.yaml holds id, quickStartId, kind, topic, and durationMinutes; src/data/cards.ts loads the registry as a typed DemoCard list; DemosPage.tsx renders the gallery where the user clicks the card; the launch calls setActiveQuickStart(card.quickStartId) from useQuickStartContext and selects my-demo in the OpenShift Console. In the Helm chart: the install switch plugin.quickStarts.my-demo.enabled in values.yaml, when true, renders the CR template templates/virt-cookbook/my-demo.yaml with metadata.name my-demo; Helm installs the cluster-scoped ConsoleQuickStart resource named my-demo, which supplies the walkthrough content the Console displays. Constraints: the card id, quickStartId, template filename, metadata.name, and Helm switch use one name; the card durationMinutes must equal spec.durationMinutes, and topic is one of setup, create, operate, networking, windows; yarn start does not install the resource and the gallery does not check whether it exists; enabled false omits the resource but leaves the card in the bundle.</desc>
+  <title id="title">Demo card wiring</title>
+  <desc id="desc">In the plugin image: the card registry src/cards.yaml holds id, quickStartId, kind, topic, and durationMinutes; src/data/cards.ts loads the registry as a typed DemoCard list; DemosPage.tsx renders the gallery where the user clicks the card; the launch calls setActiveQuickStart(card.quickStartId) from useQuickStartContext and selects my-demo in the OpenShift Console. In the Helm chart: the install switch plugin.quickStarts.my-demo.enabled in values.yaml, when true, renders the CR template templates/virt-cookbook/my-demo.yaml with metadata.name my-demo; Helm installs the cluster-scoped ConsoleQuickStart resource named my-demo, which supplies the demo content the Console displays. Constraints: the card id, quickStartId, template filename, metadata.name, and Helm switch use one name; the card durationMinutes must equal spec.durationMinutes, and topic is one of setup, create, operate, networking, windows; yarn start does not install the resource and the gallery does not check whether it exists; enabled false omits the resource but leaves the card in the bundle.</desc>
 
   <style>
     .bg { fill: #ffffff; stroke: #d0d7de; }
@@ -76,7 +76,7 @@
   <rect class="bg" x="0.5" y="0.5" width="1261" height="819" rx="16"/>
 
   <!-- Title -->
-  <text class="t h1" x="40" y="46">Walkthrough card wiring</text>
+  <text class="t h1" x="40" y="46">Demo card wiring</text>
   <text class="m b" x="40" y="68">The plugin image supplies the launch card; the Helm chart installs the ConsoleQuickStart the Console displays.</text>
 
   <!-- ===== Constraints band ===== -->
@@ -171,7 +171,7 @@
   <circle class="badge-out" cx="976" cy="572" r="10"/><text class="badge-t" x="976" y="576" text-anchor="middle">8</text>
   <text class="t h2" x="992" y="577">OpenShift Console</text>
   <line class="rule" x1="970" y1="592" x2="1210" y2="592"/>
-  <text class="t b" x="970" y="614">displays the walkthrough</text>
+  <text class="t b" x="970" y="614">displays the demo</text>
   <text class="m s" x="970" y="674">Quick Start drawer</text>
 
   <!-- Edges -->
@@ -185,7 +185,7 @@
   <path class="flow" d="M520 622 H624" marker-end="url(#a-flow)"/>
   <text class="m s" x="544" y="612">Helm installs</text>
   <path class="flow" d="M840 622 H956" marker-end="url(#a-flow)"/>
-  <text class="m s" x="848" y="612">walkthrough content</text>
+  <text class="m s" x="848" y="612">demo content</text>
 
   <!-- ===== Legend ===== -->
   <line class="rule" x1="40" y1="754" x2="1222" y2="754"/>
