@@ -160,7 +160,7 @@ spec:
 
         `virtctl vnc fedora-app-vm -n myapp`{{"{{copy}}"}}
 
-        These commands are intentionally not executable from the walkthrough
+        These commands are intentionally not executable from the demo
         because console and VNC sessions are interactive.
       review:
         instructions: >-

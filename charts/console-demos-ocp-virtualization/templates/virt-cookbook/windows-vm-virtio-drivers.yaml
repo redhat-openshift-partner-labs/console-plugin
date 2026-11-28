@@ -381,7 +381,7 @@ spec:
 
         `oc get vm,dv,pvc -n windows-virtio-demo`{{"{{execute}}"}}
 
-        Confirm this is the dedicated project created for this walkthrough
+        Confirm this is the dedicated project created for this demo
         and that no data needs to be kept. Deleting the namespace permanently
         deletes its VM, ISO volumes, root disk, and other project resources:
 
@@ -393,7 +393,7 @@ spec:
         remaining resources and events; let normal VM and storage cleanup finish.
       review:
         instructions: "Did you either retain a stopped VM with root-disk boot priority, or delete the dedicated demo project?"
-        failedTaskHelp: "Check VM shutdown and PVC deletion progress. Delete only the project created for this walkthrough; do not reuse an unrelated namespace for cleanup."
+        failedTaskHelp: "Check VM shutdown and PVC deletion progress. Delete only the project created for this demo; do not reuse an unrelated namespace for cleanup."
       summary:
         success: "The demo resources are retained intentionally or removed."
         failed: "Finish the chosen retention or cleanup path."

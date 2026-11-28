@@ -25,7 +25,7 @@ spec:
   introduction: |-
     Create a disposable Fedora virtual machine and use OpenShift's built-in
     monitoring tools to inspect its health and resource use. The VM uses an
-    ephemeral container disk, so the walkthrough does not require a
+    ephemeral container disk, so the demo does not require a
     StorageClass.
 
     You will:
@@ -213,7 +213,7 @@ spec:
         `oc get project vm-monitoring-demo`{{"{{execute}}"}}
 
         Expect a `NotFound` response. Because the VM used an ephemeral
-        container disk, this walkthrough does not create a PVC or persistent
+        container disk, this demo does not create a PVC or persistent
         volume.
       review:
         instructions: "Did vm-monitoring-demo finish deleting?"

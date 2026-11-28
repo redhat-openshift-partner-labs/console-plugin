@@ -27,7 +27,7 @@ spec:
     VM transitions through is essential for effective VM management, troubleshooting,
     and automation.
 
-    In this walkthrough, start a stopped VM, monitor its state transitions, pause and
+    In this demo, start a stopped VM, monitor its state transitions, pause and
     resume execution, and perform a graceful shutdown. Use the same shell and project
     throughout.
 

@@ -20,7 +20,7 @@ spec:
     - "A template with an available boot source, such as Fedora"
   introduction: |-
     Create a test VM from a pre-built template, customize its resources, and
-    connect to its console. This walkthrough uses `fedora-test-vm`; choose a
+    connect to its console. This demo uses `fedora-test-vm`; choose a
     different name if that VM already exists in your project.
 
     A **Template** supplies the VM definition and default settings. Its boot
@@ -55,7 +55,7 @@ spec:
         4. Click **Customize VirtualMachine** to review and adjust the settings.
 
         **Quick create VirtualMachine** creates a VM with the template defaults.
-        Use customization for this walkthrough so you can inspect the configuration
+        Use customization for this demo so you can inspect the configuration
         before allocating resources.
       review:
         instructions: "Did you open customization for a Linux template with an available boot source?"
@@ -127,7 +127,7 @@ spec:
 
     - title: "Practice VM lifecycle operations"
       description: |-
-        Perform these operations only on the test VM created in this walkthrough.
+        Perform these operations only on the test VM created in this demo.
 
         1. Click **Actions → Stop** and confirm if prompted. Wait for the VM to stop.
         2. Click **Actions → Start** and wait for **Running** again.
@@ -179,7 +179,7 @@ spec:
         instructions: "Is your test VM stopped for later use or deleted, with its disks retained or removed as you intended?"
         failedTaskHelp: "Check the VirtualMachines list and the project's PVCs. If you deleted the VM but retained unwanted disks, review their names and ownership before deleting them separately."
       summary:
-        success: "You chose how to manage the test VM and its storage after the walkthrough."
+        success: "You chose how to manage the test VM and its storage after the demo."
         failed: "Confirm the VM and disk state matches your cleanup choice."
   conclusion: |-
     You created a VM from a template, reviewed its resources, monitored provisioning,
@@ -191,6 +191,6 @@ spec:
     approved configurations.
 
     Continue with the **Create custom VM templates** or
-    **VM Instancetypes & Preferences** walkthrough in Virtualization Demos.
+    **VM Instancetypes & Preferences** demo in Virtualization Demos.
   nextQuickStart: []
 {{- end }}

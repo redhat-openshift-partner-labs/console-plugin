@@ -57,7 +57,7 @@ spec:
 
     Use one authenticated terminal and working directory throughout. Commands
     target `windows-golden-images`; this project is separate from the Console
-    project selector. This walkthrough uses existing virtualization capacity,
+    project selector. This demo uses existing virtualization capacity,
     without adding AWS infrastructure, external RDP exposure, or extra hardware.
   tasks:
     - title: "Prepare a dedicated project"
@@ -568,7 +568,7 @@ spec:
         partition. With the tested Windows Server 2025 evaluation media, C:
         remained about 19 GiB because a recovery partition separated it from
         the extra space. Review Microsoft's [volume expansion guidance](https://learn.microsoft.com/en-us/windows-server/storage/disk-management/extend-a-basic-volume)
-        before changing the partition layout; this walkthrough preserves the
+        before changing the partition layout; this demo preserves the
         cookbook's disk configuration.
 
         If Windows asks you to set the Administrator password or other settings
@@ -639,7 +639,7 @@ spec:
     Adapted from [Creating Windows Golden Images](https://github.com/RedHatQuickCourses/ocp-virt-cookbook/blob/dfa9150f9c405da76364c1f3b14abfef738cb0c7/modules/vm-lifecycle/pages/windows-golden-images.adoc).
     See that cookbook for other Windows versions and
     [KubeVirt sysprep examples](https://kubevirt.io/user-guide/user_workloads/startup_scripts/#sysprep-examples)
-    for answer-file delivery options. This walkthrough keeps the Server 2025
+    for answer-file delivery options. This demo keeps the Server 2025
     build-and-clone workflow focused; other versions need matching media,
     image descriptions, preferences, and driver paths.
   nextQuickStart: []

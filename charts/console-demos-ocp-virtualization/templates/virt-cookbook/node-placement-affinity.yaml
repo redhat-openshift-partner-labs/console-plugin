@@ -45,7 +45,7 @@ spec:
     - "Cluster access to quay.io/containerdisks/fedora:latest"
   introduction: |-
     Control where virtual machines run by applying scheduling rules to their
-    underlying `virt-launcher` pods. This walkthrough uses existing hostname
+    underlying `virt-launcher` pods. This demo uses existing hostname
     labels, so it does not change node labels or require special hardware.
 
     You will:
@@ -67,7 +67,7 @@ spec:
 
         `oc create namespace vm-placement-demo`{{"{{execute}}"}}
 
-        This walkthrough reads the built-in `kubernetes.io/hostname` label. It
+        This demo reads the built-in `kubernetes.io/hostname` label. It
         does not add, change, or remove node labels.
       review:
         instructions: "Are at least two VM-capable nodes Ready, and is vm-placement-demo new and empty?"
@@ -335,7 +335,7 @@ spec:
         `oc get namespace vm-placement-demo`{{"{{execute}}"}}
 
         Expect a `NotFound` response. No node labels, PVCs, or persistent
-        volumes were created by this walkthrough.
+        volumes were created by this demo.
       review:
         instructions: "Did vm-placement-demo finish deleting?"
         failedTaskHelp: "Run `oc get namespace vm-placement-demo` until it returns NotFound. Delete only this dedicated demo project."

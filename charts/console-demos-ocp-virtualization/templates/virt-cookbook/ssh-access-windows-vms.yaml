@@ -294,7 +294,7 @@ spec:
         `oc get svc windows-ssh-lb -w`{{"{{copy}}"}}
 
         When `EXTERNAL-IP` shows an address, press **Ctrl+C** and use that IP
-        to connect. You only need one of these Service types for the walkthrough.
+        to connect. You only need one of these Service types for the demo.
       review:
         instructions: "Do you have a NodePort or LoadBalancer Service selecting your Windows VM on port 22?"
         failedTaskHelp: "Confirm the Service selector matches vm.kubevirt.io/name for your VirtualMachine and that you applied it in the VM's project."
@@ -399,7 +399,7 @@ spec:
 
     - title: "Clean up the SSH exposure resources"
       description: |-
-        Remove the Services created in this walkthrough if you no longer need
+        Remove the Services created in this demo if you no longer need
         external SSH access:
 
         `oc delete svc windows-ssh-nodeport windows-ssh-lb --ignore-not-found`{{"{{execute}}"}}
@@ -415,7 +415,7 @@ spec:
         Keep OpenSSH installed if you still need remote command-line access.
       review:
         instructions: "Did you either keep SSH intentionally, or delete the demo Services (and optionally remove OpenSSH)?"
-        failedTaskHelp: "Delete only the windows-ssh-nodeport / windows-ssh-lb Services from this walkthrough. Leave the Windows VM unless you intend to remove it separately."
+        failedTaskHelp: "Delete only the windows-ssh-nodeport / windows-ssh-lb Services from this demo. Leave the Windows VM unless you intend to remove it separately."
       summary:
         success: "SSH exposure resources are retained intentionally or removed."
         failed: "Finish the chosen retention or cleanup path."

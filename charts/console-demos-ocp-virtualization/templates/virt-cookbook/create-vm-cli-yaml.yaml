@@ -25,7 +25,7 @@ spec:
     automation, and GitOps because the VM configuration can be reviewed and stored
     as code.
 
-    This walkthrough uses a temporary project and a Fedora boot source. Replace the
+    This demo uses a temporary project and a Fedora boot source. Replace the
     SSH key placeholder with your own public key before applying the manifest.
   tasks:
     - title: "Create a project and verify the boot source"

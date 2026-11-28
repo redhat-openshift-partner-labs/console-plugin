@@ -25,7 +25,7 @@ spec:
     and cloud-init settings. Template **parameters** let you reuse that definition
     with different names and values.
 
-    In this walkthrough, inspect a supplied RHEL 9 template, create a baseline VM,
+    In this demo, inspect a supplied RHEL 9 template, create a baseline VM,
     and register a custom template with automatic startup and a parameterized
     guest username. Use the same shell and working directory throughout. Save the
     files in the environment where your CLI runs; a Web Terminal requires access
@@ -65,7 +65,7 @@ spec:
            when you process the template; generated parameters produce values
            when no explicit override is supplied.
 
-        This walkthrough expects a template that uses those parameters and
+        This demo expects a template that uses those parameters and
         `spec.runStrategy: Halted`. Installed template versions can differ;
         review their settings rather than assuming the downloaded YAML matches
         an older example.
@@ -332,7 +332,7 @@ spec:
         further practice or remove it.
 
         Before deleting anything, confirm that this is the project you created
-        solely for this walkthrough and review its contents:
+        solely for this demo and review its contents:
 
         `oc get vm,template,dv,pvc -n template-example`{{"{{execute}}"}}
 
