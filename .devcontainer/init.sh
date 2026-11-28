@@ -4,7 +4,7 @@ if [[ ! -f .devcontainer/dev.env ]]
 then
     cat << EOF
     env file 'dev.env' does not exist in .devcontainer, please create it and add the the correct values for your cluster.
-    OC_PLUGIN_NAME=partner-labs-console-plugin
+    OC_PLUGIN_NAME=console-demos-ocp-virtualization
     OC_URL=https://api.example.com:6443
     OC_USER=kubeadmin
     OC_PASS=<password>
@@ -16,7 +16,7 @@ fi
 
 # if one of the variables are missing, abort the build.
 success=1
-! grep -qx OC_PLUGIN_NAME=partner-labs-console-plugin ".devcontainer/dev.env" && success=0
+! grep -qx OC_PLUGIN_NAME=console-demos-ocp-virtualization ".devcontainer/dev.env" && success=0
 ! grep -q OC_URL= ".devcontainer/dev.env" && success=0
 ! grep -q OC_USER= ".devcontainer/dev.env" && success=0
 ! grep -q OC_PASS= ".devcontainer/dev.env" && success=0
@@ -26,7 +26,7 @@ if ((success)); then
 else
     cat << EOF
     dev.env is not formatted correctly, please add the the correct values for your cluster.
-    OC_PLUGIN_NAME=partner-labs-console-plugin
+    OC_PLUGIN_NAME=console-demos-ocp-virtualization
     OC_URL=https://api.example.com:6443
     OC_USER=kubeadmin
     OC_PASS=<password>

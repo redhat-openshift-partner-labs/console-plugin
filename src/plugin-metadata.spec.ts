@@ -14,7 +14,7 @@ const extensions = JSON.parse(
 
 describe('plugin metadata', () => {
   it('has a matching i18n locale file, package name, and consolePlugin name', () => {
-    expect(packageJson.consolePlugin.name).toBe('partner-labs-console-plugin');
+    expect(packageJson.consolePlugin.name).toBe('console-demos-ocp-virtualization');
     expect(fs.existsSync(localeFile)).toBe(true);
     expect(packageJson.name).toBe(packageJson.consolePlugin.name);
   });

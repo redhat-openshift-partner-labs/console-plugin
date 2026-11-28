@@ -1,13 +1,13 @@
 {
-  "name": "partner-labs-console-plugin",
-  "version": "0.0.1",
-  "description": "OpenShift Console plugin for OpenShift Partner Labs",
+  "name": "console-demos-ocp-virtualization",
+  "version": "1.0.0",
+  "description": "OpenShift Console plugin for OCP Virtualization Demos by OpenShift Partner Labs",
   "private": true,
   "type": "module",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/redhat-openshift-partner-labs/console-plugin.git"
+    "url": "git+https://github.com/redhat-openshift-partner-labs/console-demos-ocp-virtualization.git"
   },
   "engines": {
     "node": "^24.0.0"
@@ -82,10 +82,10 @@
     "yaml-loader": "^0.9.0"
   },
   "consolePlugin": {
-    "name": "partner-labs-console-plugin",
-    "version": "0.0.1",
-    "displayName": "OpenShift Partner Labs",
-    "description": "OpenShift Console plugin for OpenShift Partner Labs",
+    "name": "console-demos-ocp-virtualization",
+    "version": "1.0.0",
+    "displayName": "OCP Virtualization Demos",
+    "description": "OpenShift Console plugin for OCP Virtualization Demos by OpenShift Partner Labs",
     "exposedModules": {
       "DemosPage": "./components/DemosPage"
     },

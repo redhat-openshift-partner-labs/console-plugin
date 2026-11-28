@@ -40,7 +40,7 @@ import './demos.css';
 const availableKinds = Array.from(new Set(cards.map((card) => card.kind)));
 
 const DemosPageContent: FC = () => {
-  const { t } = useTranslation('plugin__partner-labs-console-plugin');
+  const { t } = useTranslation('plugin__console-demos-ocp-virtualization');
   const [namespace] = useActiveNamespace();
   const kinds = getKinds(t);
   const { setActiveQuickStart } = useQuickStartContext();
@@ -74,7 +74,7 @@ const DemosPageContent: FC = () => {
             title={<TabTitleText>{t('Catalog')}</TabTitleText>}
             data-test="tab-catalog"
           >
-            <Toolbar className="partner-labs-console-plugin__toolbar">
+            <Toolbar className="console-demos-ocp-virtualization__toolbar">
               <ToolbarContent>
                 <ToolbarItem>
                   <SearchInput
@@ -90,7 +90,7 @@ const DemosPageContent: FC = () => {
                     data-test="search-demos"
                   />
                 </ToolbarItem>
-                <ToolbarItem className="partner-labs-console-plugin__kind-scroll">
+                <ToolbarItem className="console-demos-ocp-virtualization__kind-scroll">
                   <ToggleGroup aria-label={t('Filter by kind')}>
                     <ToggleGroupItem
                       text={t('All')}
