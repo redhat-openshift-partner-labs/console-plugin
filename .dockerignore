@@ -6,8 +6,9 @@
 .idea
 .devcontainer
 
-# CI and local tooling that the image build does not use
+# CI, documentation, and local tooling that the image build does not use
 .ci-operator.yaml
+docs
 ct.yaml
 charts
 scripts
