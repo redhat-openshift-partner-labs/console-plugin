@@ -102,54 +102,91 @@ files.
 
 ## Deploy
 
-Build, push, and deploy an image in order with `make release`:
-
 ```sh
 make release IMAGE=quay.io/your-namespace/console-demos-ocp-virtualization:latest
 ```
 
-The `build`, `push`, and `deploy` targets are also available individually;
-`make build-push` combines the first two. The container engine defaults to
-Podman; set `CONTAINER_ENGINE=docker` to use Docker. The build platform defaults
-to `linux/amd64`, which is useful when building for amd64 OpenShift nodes from
-Apple Silicon. The release and namespace default to
-`console-demos-ocp-virtualization`; override them with `RELEASE` and `NAMESPACE`.
-Set `KUBE_CONTEXT` to select a specific cluster context for deployment.
+`release` runs `build`, `push`, and `deploy` in order. Each target is also
+available on its own, and `build-push` combines the first two. `deploy` runs
+`helm upgrade --install` with `--take-ownership`, so existing `ConsoleQuickStart`
+and related objects without Helm annotations are adopted into the release.
 
-Deploy a pull request to a test cluster with one target:
+![Deploy flow: make release builds and pushes the image and runs helm upgrade; make deploy-pr checks out the pull request first. The chart creates the ConsolePlugin, a Job that enables the plugin, the ConsoleQuickStart resources, and the Deployment and Service that the Console loads the plugin from.](docs/images/deploy-flow.svg)
+
+<details>
+<summary>Diagram source</summary>
+
+```mermaid
+flowchart LR
+    dev([Developer])
+    dev -->|"make deploy-pr PR=n IMAGE_REGISTRY=r"| checkout["gh pr checkout<br/>make checkout-pr PR=n<br/>requires a clean working tree"]
+    dev -->|"make release IMAGE=i"| build
+    checkout --> build["Container build<br/>podman by default<br/>--platform linux/amd64"]
+    build --> push["Container push<br/>engine logged in to the registry"]
+    push --> registry[("Image registry<br/>IMAGE=#lt;registry#gt;/#lt;name#gt;:#lt;tag#gt;<br/>deploy-pr: pr-N-quickstart:latest")]
+    push --> helm["helm upgrade --install<br/>--take-ownership<br/>--set-string plugin.image"]
+    subgraph cluster["OpenShift cluster, one namespace"]
+        plugin["ConsolePlugin<br/>backend: the Service, port 9443<br/>fixed cluster-scoped name"]
+        job["Job, post-install and post-upgrade hook<br/>oc patch consoles.operator.openshift.io cluster spec.plugins<br/>adds the plugin name to the list"]
+        quickstarts[("ConsoleQuickStart resources<br/>one per enabled values entry<br/>quickStarts.#lt;name#gt;.enabled<br/>cluster scoped")]
+        workload["Deployment and Service<br/>nginx serves dist/ over TLS, port 9443<br/>serving cert via Service annotation"]
+    end
+    helm --> cluster
+    registry -.->|"image pull"| workload
+    plugin -.->|"loaded once the Job enables it"| console["OpenShift Console<br/>loads the plugin from the Service"]
+    %% Namespace and release name are console-demos-ocp-virtualization by default; NAMESPACE and RELEASE override them
+    %% deploy-pr requires a clean working tree and leaves the tree on the PR branch
+    %% Image name: deploy-pr pushes IMAGE_REGISTRY/pr-N-quickstart:latest; set IMAGE to override it
+    %% Helm 3.17 or newer is required for --take-ownership
+    %% Registry: the container engine must be logged in to the registry, and the cluster must be able to pull the image
+    %% ConsolePlugin has a fixed cluster-scoped name, so a second release cannot adopt it
+```
+
+</details>
+
+| Variable             | Default                                                                            | Used by                                                                    |
+| -------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `IMAGE`              | `<IMAGE_REGISTRY>/pr-<PR>-quickstart:latest` when both are set; otherwise required | `build`, `push`, `deploy`, `release`, `deploy-pr`                          |
+| `IMAGE_REGISTRY`     | empty                                                                              | `deploy-pr`, to derive `IMAGE`                                             |
+| `PR`                 | empty                                                                              | `checkout-pr`, `deploy-pr`                                                 |
+| `PLATFORM`           | `linux/amd64`                                                                      | `build`; keep the default when building for amd64 nodes from Apple Silicon |
+| `CONTAINER_ENGINE`   | `podman`                                                                           | `build`, `push`; set `docker` to use Docker                                |
+| `RELEASE`            | `console-demos-ocp-virtualization`                                                 | `deploy`                                                                   |
+| `NAMESPACE`          | `console-demos-ocp-virtualization`                                                 | `deploy`; created if missing                                               |
+| `CHART`              | `charts/console-demos-ocp-virtualization`                                          | `deploy`                                                                   |
+| `KUBE_CONTEXT`       | current kubeconfig context                                                         | `deploy`, as `--kube-context`                                              |
+| `HELM`, `GH`, `YARN` | `helm`, `gh`, the checked-in Yarn release                                          | `deploy`; `checkout-pr`; `install`                                         |
+
+Cluster-scoped chart resources such as the `ConsolePlugin` keep the fixed name
+`console-demos-ocp-virtualization`, so a second release cannot adopt them.
+Override `RELEASE` or `NAMESPACE` only when intentionally replacing a
+non-default install.
+
+Set `plugin.quickStarts.<name>.enabled=false` to omit one walkthrough's
+`ConsoleQuickStart` resource. [`values.yaml`](charts/console-demos-ocp-virtualization/values.yaml)
+lists every switch.
+
+### Deploy a pull request to a test cluster
 
 ```sh
 make deploy-pr PR=50 IMAGE_REGISTRY=quay.io/your-namespace
 ```
 
-This checks out the PR, builds and pushes
-`quay.io/your-namespace/pr-50-quickstart:latest`, then upgrades the default Helm
-release and namespace (`console-demos-ocp-virtualization`). Cluster-scoped chart
-resources such as `ConsolePlugin` keep that fixed name, so a separate PR release
-cannot adopt them. Deploy uses Helm `--take-ownership` so existing
-`ConsoleQuickStart` and related objects without Helm annotations can be adopted
-into that release. Override `RELEASE` or `NAMESPACE` only when intentionally
-replacing a non-default install. Helm uses the current context from
-`KUBECONFIG` or the default kubeconfig; set `KUBE_CONTEXT` only to override that
-context. The working tree must be clean, and the selected container engine must
-be logged in to the image registry; the cluster must be able to pull the image.
-The target leaves the working tree checked out to the PR. Set `IMAGE` to a full
-image reference to override the generated image name. Requires Helm 3.17+.
+Preconditions:
 
-Reviewers can check out a pull request with `make checkout-pr PR=<number>`.
-This target requires the GitHub CLI and a clean working tree.
+- A clean working tree.
+- The GitHub CLI (`gh`), authenticated.
+- The container engine logged in to the registry.
+- A cluster that can pull the image. Helm uses the current kubeconfig context
+  unless `KUBE_CONTEXT` is set.
 
-Set `plugin.quickStarts.vm-instancetypes-and-preferences.enabled=false` to omit the
-walkthrough resource.
+The target:
 
-The **Create a VM from the web console** card launches the `create-vm-web-console`
-Quick Start, adapted from the VM cookbook's `create-vm-web-console.adoc`. It covers
-template selection, customization, provisioning, console access, lifecycle
-operations, monitoring, and optional cleanup. Set
-`plugin.quickStarts.create-vm-web-console.enabled=false` to omit its resource.
+1. Checks out the pull request with `gh pr checkout`.
+2. Builds and pushes `quay.io/your-namespace/pr-50-quickstart:latest`.
+3. Upgrades the default release and namespace with `--take-ownership`.
+4. Leaves the working tree on the pull request branch.
 
-The **Create custom VM templates** card launches the `vm-templates` Quick Start,
-adapted from the VM cookbook's `vm-templates.adoc`. It covers CLI template
-inspection, baseline VM deployment, custom template registration, parameter
-processing, guest login, and cleanup of a dedicated tutorial project. Set
-`plugin.quickStarts.vm-templates.enabled=false` to omit its resource.
+Set `IMAGE` to a full image reference to override the generated name.
+Reviewers can check out a pull request without deploying with
+`make checkout-pr PR=<number>`; it needs `gh` and a clean working tree.
