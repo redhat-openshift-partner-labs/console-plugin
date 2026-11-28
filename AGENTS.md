@@ -4,7 +4,7 @@ This document provides context and guidelines for AI coding assistants working o
 
 ## Project Overview
 
-This repository adds a Virtualization Demos page to the OpenShift Console. Each card on the page starts a `ConsoleQuickStart` walkthrough. It can be used via GitHub's "Use this template" feature.
+This repository adds a Virtualization Demos page to the OpenShift Console. Each card on the page starts a demo defined by a `ConsoleQuickStart`. It can be used via GitHub's "Use this template" feature.
 
 **Key Technologies:**
 - TypeScript + React 17
@@ -112,7 +112,7 @@ Current config has `strict: true` and enforces:
 
 ### Adding or Updating a ConsoleQuickStart
 
-Follow the [Add a walkthrough section of the README](README.md#add-a-walkthrough)
+Follow the [Add a demo section of the README](README.md#add-a-demo)
 and review the [OpenShift 4.22 Quick Start authoring guide](https://docs.redhat.com/en/documentation/openshift_container_platform/4.22/html/web_console/creating-quick-start-tutorials)
 for every new or changed Quick Start.
 
@@ -120,7 +120,7 @@ Give each task a clear action, an observable review question, and useful failure
 help. Consider command copy/run controls, UI highlights, prerequisites, and
 follow-on Quick Starts when they help the learner.
 
-Run the repository validation checks and verify the walkthrough in a real
+Run the repository validation checks and verify the demo in a real
 Console on the target OpenShift release. Run controls require Web Terminal;
 do not assume the localhost Console supports command execution.
 

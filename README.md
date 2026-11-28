@@ -1,12 +1,12 @@
 # OpenShift Partner Labs Console Plugin
 
 This OpenShift Console dynamic plugin adds a **Virtualization Demos** page of
-guided OpenShift Virtualization walkthroughs for partners evaluating the
-product and for the contributors who write those walkthroughs.
+guided OpenShift Virtualization demos for partners evaluating OpenShift
+Virtualization and for the contributors who write those demos.
 
 ## Cards
 
-Each card on the page starts one `ConsoleQuickStart` walkthrough in the Console
+Each card on the page starts one demo, a `ConsoleQuickStart`, in the Console
 Quick Start drawer. `src/cards.yaml` is the card registry, `src/data/cards.ts`
 loads it, and `src/components/DemosPage.tsx` renders the gallery. The
 `ConsoleQuickStart` templates live in
@@ -35,15 +35,15 @@ checks it.
 | Node.js                   | 24, from `.nvmrc`                         | Building the plugin. The Docker image, CI, and devcontainer also use Node.js 24.  |
 | Yarn                      | 4.18.0, checked in under `.yarn/releases` | `make install` and every `yarn` script.                                           |
 | Helm                      | 3.17 or newer                             | `make deploy`, which passes `--take-ownership`, and `yarn validate:quickstarts`.  |
-| `oc` with a cluster login |                                           | `yarn start-console` and deployment.                                              |
+| `oc` with a cluster login |                                           | `yarn start-console` and the verification commands.                               |
 | Podman or Docker          |                                           | The local Console container and the image build.                                  |
 
 The build supports the 4.19–4.21 compatibility router and the 4.22+ router
 bridge. Console 4.22 changed its shared React, router, and i18n versions, so
 validate the plugin on each Console release you deploy to.
 
-Every card's walkthrough requires the `ConsoleQuickStart` resource installed by
-the Helm chart. Running only the local plugin server installs none of them.
+Every demo requires its `ConsoleQuickStart` resource, installed by the Helm
+chart. Running only the local plugin server installs none of them.
 
 ## Develop
 
@@ -77,14 +77,14 @@ Use the project selector above the Demos tabs to change the active Console
 project. Activity shows the labeled resources in that project; **All projects**
 shows none.
 
-## Add a walkthrough
+## Add a demo
 
-The plugin supplies a launch card; the Console displays the walkthrough from an
+The plugin supplies a launch card; the Console displays the demo from an
 installed `ConsoleQuickStart` resource. Use the
 [OpenShift Quick Start authoring guide](https://docs.redhat.com/en/documentation/openshift_container_platform/4.22/html/web_console/creating-quick-start-tutorials)
-for the resource schema and the walkthrough content.
+for the resource schema and the demo content.
 
-![Walkthrough card wiring: in the plugin image, src/cards.yaml is loaded by src/data/cards.ts, rendered by DemosPage.tsx, and launched with setActiveQuickStart; in the Helm chart, the values.yaml switch renders the CR template, Helm installs the ConsoleQuickStart, and the Console displays it.](docs/images/card-wiring.svg)
+![Demo card wiring: in the plugin image, src/cards.yaml is loaded by src/data/cards.ts, rendered by DemosPage.tsx, and launched with setActiveQuickStart; in the Helm chart, the values.yaml switch renders the CR template, Helm installs the ConsoleQuickStart, and the Console displays it.](docs/images/card-wiring.svg)
 
 <details>
 <summary>Diagram source</summary>
@@ -106,8 +106,8 @@ flowchart TB
     end
 
     manifest -->|"Helm installs"| resource[("ConsoleQuickStart<br/>cluster scoped<br/>metadata.name: my-demo")]
-    launch -->|"selects my-demo"| console["OpenShift Console<br/>displays the walkthrough<br/>Quick Start drawer"]
-    resource -->|"walkthrough content"| console
+    launch -->|"selects my-demo"| console["OpenShift Console<br/>displays the demo<br/>Quick Start drawer"]
+    resource -->|"demo content"| console
     %% One name: the card id, quickStartId, template filename, metadata.name, and the Helm switch use the same name
     %% Labels: durationMinutes must equal spec.durationMinutes; topic is one of setup, create, operate, networking, windows
     %% Local server: yarn start does not install the resource, and the gallery does not check whether it exists
@@ -122,7 +122,7 @@ flowchart TB
 | Card type and loader | [`src/data/cards.ts`](src/data/cards.ts)                                                       | Loads the registry into the plugin bundle as `DemoCard[]`.                                                                                      |
 | Topics               | [`src/data/topics.ts`](src/data/topics.ts)                                                     | `TOPIC_IDS` lists the allowed `topic` values and their labels and colors.                                                                       |
 | Launch handler       | [`src/components/DemosPage.tsx`](src/components/DemosPage.tsx)                                 | Calls `setActiveQuickStart?.(card.quickStartId)` through the SDK's `useQuickStartContext`.                                                      |
-| CR templates         | [`templates/virt-cookbook/`](charts/console-demos-ocp-virtualization/templates/virt-cookbook/) | Helm installs the walkthrough resources.                                                                                                        |
+| CR templates         | [`templates/virt-cookbook/`](charts/console-demos-ocp-virtualization/templates/virt-cookbook/) | Helm installs the demo resources.                                                                                                               |
 | Install switches     | [`values.yaml`](charts/console-demos-ocp-virtualization/values.yaml)                           | `plugin.quickStarts.<name>.enabled` controls whether each resource is rendered.                                                                 |
 
 **Use one name for all four identifiers:** the card's `id`, its `quickStartId`,
@@ -134,18 +134,18 @@ same name for the Helm switch `plugin.quickStarts.<name>.enabled`. For example,
 `quickStartId`. Card IDs must be unique.
 
 The card title and the resource's `spec.displayName` are separate: the first
-appears in the gallery, the second in the Console walkthrough. The card's
+appears in the gallery, the second in the Quick Start drawer. The card's
 `durationMinutes` must equal the resource's `spec.durationMinutes`; the
 validator rejects a difference. The card's `topic` must be one of `setup`,
 `create`, `operate`, `networking`, or `windows` from `src/data/topics.ts`. A
-walkthrough card needs no new route or exposed module.
+demo card needs no new route or exposed module.
 
 ### Steps
 
 1. Copy an existing template, such as
    [`vm-templates.yaml`](charts/console-demos-ocp-virtualization/templates/virt-cookbook/vm-templates.yaml),
    to `templates/virt-cookbook/my-demo.yaml`. Set `metadata.name` and the Helm
-   condition to `my-demo`, then replace the walkthrough content. Preserve the
+   condition to `my-demo`, then replace the demo content. Preserve the
    chart label helper. For `my-demo`, the condition is:
 
    ```gotemplate
@@ -170,7 +170,7 @@ walkthrough card needs no new route or exposed module.
      topic: operate
      durationMinutes: 20
      title: My demo
-     body: Follow a guided walkthrough of my demo.
+     body: Guided steps for my demo.
      quickStartId: my-demo
    ```
 
@@ -192,17 +192,17 @@ oc get consolequickstart my-demo
 ```
 
 The parameterized launch test in
-[`DemosPage.spec.tsx`](src/components/DemosPage.spec.tsx) discovers walkthrough
+[`DemosPage.spec.tsx`](src/components/DemosPage.spec.tsx) discovers demo
 cards from the registry. Add an opening check in
 [`card-page.spec.ts`](integration-tests/tests/card-page.spec.ts), following the
-existing tests: click `card-action-my-demo`, then assert the walkthrough heading
+existing tests: click `card-action-my-demo`, then assert the Quick Start heading
 and initial content. Run `yarn test` and verify the card at
 `/console-demos-ocp-virtualization` against a cluster with the resource
 installed.
 
 Setting `plugin.quickStarts.my-demo.enabled=false` omits the resource but leaves
 its card in the bundle. The gallery does not check whether the resource exists.
-If a card does not open its walkthrough, check the installed resource name,
+If a card does not open its demo, check the installed resource name,
 `quickStartId`, and the Helm switch first.
 
 ## Use as a template
@@ -222,13 +222,13 @@ translated strings.
 against the card registry and Helm switches: required Quick Start fields, task
 reviews and summaries, YAML types and duplicate keys, the shared naming
 convention, and each card's `topic` and `durationMinutes`. It renders defaults,
-all enabled, each walkthrough disabled in turn, and all disabled; disabling one
-walkthrough must not change another. New templates and cards are discovered
+all enabled, each demo disabled in turn, and all disabled; disabling one demo
+must not change another. New templates and cards are discovered
 automatically, and failures name the file or resource and the field or
 rendering scenario.
 
 These checks run without a cluster. They do not execute embedded commands,
-verify external links, or prove that a walkthrough works on a particular
+verify external links, or prove that a demo works on a particular
 OpenShift release; verify that in a Console. Console markers such as
 `{{execute}}` and `{{copy}}` are valid rendered content and are preserved.
 
@@ -294,7 +294,7 @@ Cluster-scoped chart resources such as the `ConsolePlugin` keep the fixed name
 Override `RELEASE` or `NAMESPACE` only when intentionally replacing a
 non-default install.
 
-Set `plugin.quickStarts.<name>.enabled=false` to omit one walkthrough's
+Set `plugin.quickStarts.<name>.enabled=false` to omit one demo's
 `ConsoleQuickStart` resource. [`values.yaml`](charts/console-demos-ocp-virtualization/values.yaml)
 lists every switch.
 

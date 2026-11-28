@@ -51,8 +51,8 @@ handles both commands and replies on the issue when a claim is refused.
 
 1. Fork the repository, or create a branch if you have push access.
 2. Run `make install`.
-3. Make the change. For a new or changed walkthrough, follow the
-   [Add a walkthrough](README.md#add-a-walkthrough) section of the README.
+3. Make the change. For a new or changed demo, follow the
+   [Add a demo](README.md#add-a-demo) section of the README.
 4. Run `make check`. It runs `make lint`, `make test`, and `make build-plugin`.
    `make lint` applies fixes, so review the diff after it runs.
 5. Run `yarn i18n` after adding or changing user-visible text and commit the
